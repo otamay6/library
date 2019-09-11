@@ -3,37 +3,37 @@
 constexpr double eps=1e-9;
 const double PI=acos(-1);
 
-struct GP{
+struct Coordinate_Plane{
     double x,y;
-    GP(double X=0,double Y=0):x(X),y(Y){}
-    GP(const GP &cp){
+    Coordinate_Plane(double X=0,double Y=0):x(X),y(Y){}
+    Coordinate_Plane(const Coordinate_Plane &cp){
         x=cp.x;y=cp.y;
     }
-    GP& set(double X,double Y){
+    Coordinate_Plane& set(double X,double Y){
         x=X;y=Y;
         return *this;
     }
-    GP& operator=(const GP &p){return set(p.x , p.y);}
-    GP operator+(const GP &p)const{return GP(x+p.x , y+p.y);}
-    GP operator-(const GP &p)const{return GP(x-p.x , y-p.y);}
-    GP operator*(double s)const{return GP(x*s,y*s);}
-    GP operator/(double s)const{return GP(x/s,y/s);}
-    friend GP operator*(double s,const GP &r){return GP(r.x*s,r.y*s);}
-    friend GP operator/(double s,const GP &r){return GP(r.x/s,r.y/s);}
-    double operator*(GP p)const{return dot(p);}
-    double operator^(GP p)const{return cross(p);}
-    GP& operator+=(const GP &p){return set(x+p.x , y+p.y);}
-    GP& operator-=(const GP &p){return set(x-p.x , y-p.y);}
-    GP& operator*=(double s){return set(x*s,y*s);}
-    GP& operator/=(double s){return set(x/s,y/s);}
-    double dot(const GP &p)const{return x*p.x + y*p.y;} 
-    double cross(const GP &p)const{return x*p.y-p.x*y;}
+    Coordinate_Plane& operator=(const Coordinate_Plane &p){return set(p.x , p.y);}
+    Coordinate_Plane operator+(const Coordinate_Plane &p)const{return Coordinate_Plane(x+p.x , y+p.y);}
+    Coordinate_Plane operator-(const Coordinate_Plane &p)const{return Coordinate_Plane(x-p.x , y-p.y);}
+    Coordinate_Plane operator*(double s)const{return Coordinate_Plane(x*s,y*s);}
+    Coordinate_Plane operator/(double s)const{return Coordinate_Plane(x/s,y/s);}
+    friend Coordinate_Plane operator*(double s,const Coordinate_Plane &r){return Coordinate_Plane(r.x*s,r.y*s);}
+    friend Coordinate_Plane operator/(double s,const Coordinate_Plane &r){return Coordinate_Plane(r.x/s,r.y/s);}
+    double operator*(Coordinate_Plane p)const{return dot(p);}
+    double operator^(Coordinate_Plane p)const{return cross(p);}
+    Coordinate_Plane& operator+=(const Coordinate_Plane &p){return set(x+p.x , y+p.y);}
+    Coordinate_Plane& operator-=(const Coordinate_Plane &p){return set(x-p.x , y-p.y);}
+    Coordinate_Plane& operator*=(double s){return set(x*s,y*s);}
+    Coordinate_Plane& operator/=(double s){return set(x/s,y/s);}
+    double dot(const Coordinate_Plane &p)const{return x*p.x + y*p.y;} 
+    double cross(const Coordinate_Plane &p)const{return x*p.y-p.x*y;}
     int ort()const{
         if(fabs(x)<eps && fabs(y)<eps) return 0;
         if(y>0) return (x>0)?1:2;
         else return (x<=0)?3:4;
     }
-    bool operator<(const GP &p)const{
+    bool operator<(const Coordinate_Plane &p)const{
         int o=ort(),po=p.ort();
         if(o!=po) return o<po;
         else{
@@ -45,8 +45,8 @@ struct GP{
             return cr>0;
         }
     }
-    friend std::istream& operator>>(std::istream &is, GP &x){double valX,valY; is>>valX>>valY; x.set(valX,valY); return is;}
-    friend std::ostream& operator<<(std::ostream &os, const GP &v){ os << v.x<<" "<<v.y<<endl; return os; }
+    friend std::istream& operator>>(std::istream &is, Coordinate_Plane &x){double valX,valY; is>>valX>>valY; x.set(valX,valY); return is;}
+    friend std::ostream& operator<<(std::ostream &os, const Coordinate_Plane &v){ os << v.x<<" "<<v.y<<endl; return os; }
     double norm2()const{return x*x+y*y;}
     double norm()const{return sqrt(norm2());}
     double rad()const{
@@ -69,27 +69,27 @@ struct GP{
     }
 };
 struct Line{
-    GP A,B;
-    Line(GP p1=GP(0,0),GP p2=GP(1,1)):A(p1),B(p2){}
+    Coordinate_Plane A,B;
+    Line(Coordinate_Plane p1=Coordinate_Plane(0,0),Coordinate_Plane p2=Coordinate_Plane(1,1)):A(p1),B(p2){}
     double len()const{return (B-A).norm();}
-    GP shortest_point(const GP &x)const{
+    Coordinate_Plane shortest_point(const Coordinate_Plane &x)const{
         double a=B.x-A.x,b=B.y-A.y;
         double t=-(a*(A.x-x.x)+b*(A.y-x.y))/(a*a+b*b);
-        return GP(a*t+A.x,b*t+A.y);
+        return Coordinate_Plane(a*t+A.x,b*t+A.y);
     }
-    double dist(const GP &x)const{
+    double dist(const Coordinate_Plane &x)const{
         return (x-shortest_point(x)).norm();
     }
-    bool online(const GP &x)const{
+    bool online(const Coordinate_Plane &x)const{
         return ((B-A)^(x-A))==0&&(x-A).norm()<=len()&&(x-B).norm()<=len();
     }
     
-    friend std::istream& operator>>(std::istream &is, Line &x){GP X,Y; is>>X>>Y;x.A=X;x.B=Y;return is;}
+    friend std::istream& operator>>(std::istream &is, Line &x){Coordinate_Plane X,Y; is>>X>>Y;x.A=X;x.B=Y;return is;}
     friend std::ostream& operator<<(std::ostream &os, const Line &x){ os << x.A << x.B; return os; }
 };
 struct Triangle{
-    GP a,b,c;
-    Triangle(GP p1=GP(0,0),GP p2=GP(1,0),GP p3=(0,1)):a(p1),b(p2),c(p3){}
+    Coordinate_Plane a,b,c;
+    Triangle(Coordinate_Plane p1=Coordinate_Plane(0,0),Coordinate_Plane p2=Coordinate_Plane(1,0),Coordinate_Plane p3=(0,1)):a(p1),b(p2),c(p3){}
 
     double A()const{double res=fabs((b-a).rad()-(c-a).rad());if(res>=PI) res-=PI;return res;}
     double B()const{double res=fabs((a-b).rad()-(c-b).rad());if(res>=PI) res-=PI;return res;}
@@ -98,25 +98,25 @@ struct Triangle{
     Line BC()const{return Line(b,c);}
     Line CA()const{return Line(c,a);}
 
-    GP G()const{return (a+b+c)/3;}
-    GP O()const{return (sin(2*A())*a+sin(2*B())*b+sin(2*C())*c)/(sin(2*A())+sin(2*B())+sin(2*C()));}
+    Coordinate_Plane G()const{return (a+b+c)/3;}
+    Coordinate_Plane O()const{return (sin(2*A())*a+sin(2*B())*b+sin(2*C())*c)/(sin(2*A())+sin(2*B())+sin(2*C()));}
     double R()const{return a.norm()/(2*sin(A()));}
-    GP I()const{return (a.norm()*a+b.norm()*b+c.norm()*c)/(a.norm()+b.norm()+c.norm());}
+    Coordinate_Plane I()const{return (a.norm()*a+b.norm()*b+c.norm()*c)/(a.norm()+b.norm()+c.norm());}
     double r()const{return 2*area()/((a-b).norm()+(b-c).norm()+(c-a).norm());}
-    GP H()const{return (tan(A())*a+tan(B())*b+tan(C())*c)/(tan(A())+tan(B())+tan(C()));}
+    Coordinate_Plane H()const{return (tan(A())*a+tan(B())*b+tan(C())*c)/(tan(A())+tan(B())+tan(C()));}
     double AH()const{return 2*R()*cos(A());}
     double BH()const{return 2*R()*cos(B());}
     double CH()const{return 2*R()*cos(C());}
     double area()const{return ((b-a)^(c-a))/2;}
 
-    bool inside(const GP &x)const{
+    bool inside(const Coordinate_Plane &x)const{
         return ((b-a)^(x-a))*((c-a)^(x-a))<0&&
                ((a-b)^(x-b))*((c-b)^(x-b))<0&&
                ((a-c)^(x-c))*((b-c)^(x-c))<0;
     }
-    bool online(const GP &x)const{return AB().online(x)||BC().online(x)||CA().online(x);}
-    bool outside(const GP &x)const{return (!inside(x)&&!online(x));}
+    bool online(const Coordinate_Plane &x)const{return AB().online(x)||BC().online(x)||CA().online(x);}
+    bool outside(const Coordinate_Plane &x)const{return (!inside(x)&&!online(x));}
 
-    friend std::istream& operator>>(std::istream &is, Triangle &x){GP X,Y,Z; is>>X>>Y>>Z; x.a=X;x.b=Y;x.c=Z;return is;}
+    friend std::istream& operator>>(std::istream &is, Triangle &x){Coordinate_Plane X,Y,Z; is>>X>>Y>>Z; x.a=X;x.b=Y;x.c=Z;return is;}
     friend std::ostream& operator<<(std::ostream &os, const Triangle &v){ os << v.a << v.b; return os; }
 };
