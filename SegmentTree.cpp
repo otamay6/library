@@ -1,9 +1,11 @@
+#include<vector>
+#include<functional>
 template<typename T> class SegmentTree{
   private:
-    typedef function<T(T,T)> F;
+    typedef std::function<T(T,T)> F;
     int n;
     T d0;
-    vector<T> vertex;
+    std::vector<T> vertex;
     F f;
     F g;
   public:

@@ -1,3 +1,8 @@
+#include<iostream>
+#include<math.h>
+constexpr double eps=1e-9;
+const double PI=acos(-1);
+
 struct GP{
     double x,y;
     GP(double X=0,double Y=0):x(X),y(Y){}
@@ -40,8 +45,8 @@ struct GP{
             return cr>0;
         }
     }
-    friend istream& operator>>(istream &is, GP &x){double valX,valY; is>>valX>>valY; x.set(valX,valY); return is;}
-    friend ostream& operator<<(ostream &os, const GP &v){ os << v.x<<" "<<v.y<<endl; return os; }
+    friend std::istream& operator>>(std::istream &is, GP &x){double valX,valY; is>>valX>>valY; x.set(valX,valY); return is;}
+    friend std::ostream& operator<<(std::ostream &os, const GP &v){ os << v.x<<" "<<v.y<<endl; return os; }
     double norm2()const{return x*x+y*y;}
     double norm()const{return sqrt(norm2());}
     double rad()const{
@@ -79,8 +84,8 @@ struct Line{
         return ((B-A)^(x-A))==0&&(x-A).norm()<=len()&&(x-B).norm()<=len();
     }
     
-    friend istream& operator>>(istream &is, Line &x){GP X,Y; is>>X>>Y;x.A=X;x.B=Y;return is;}
-    friend ostream& operator<<(ostream &os, const Line &x){ os << x.A << x.B; return os; }
+    friend std::istream& operator>>(std::istream &is, Line &x){GP X,Y; is>>X>>Y;x.A=X;x.B=Y;return is;}
+    friend std::ostream& operator<<(std::ostream &os, const Line &x){ os << x.A << x.B; return os; }
 };
 struct Triangle{
     GP a,b,c;
@@ -112,6 +117,6 @@ struct Triangle{
     bool online(const GP &x)const{return AB().online(x)||BC().online(x)||CA().online(x);}
     bool outside(const GP &x)const{return (!inside(x)&&!online(x));}
 
-    friend istream& operator>>(istream &is, Triangle &x){GP X,Y,Z; is>>X>>Y>>Z; x.a=X;x.b=Y;x.c=Z;return is;}
-    friend ostream& operator<<(ostream &os, const Triangle &v){ os << v.a << v.b; return os; }
+    friend std::istream& operator>>(std::istream &is, Triangle &x){GP X,Y,Z; is>>X>>Y>>Z; x.a=X;x.b=Y;x.c=Z;return is;}
+    friend std::ostream& operator<<(std::ostream &os, const Triangle &v){ os << v.a << v.b; return os; }
 };
