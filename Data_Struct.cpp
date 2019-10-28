@@ -10,13 +10,18 @@ template<typename T> class SegmentTree{
     F f;
     F g;
   public:
-    SegmentTree(int _n,F f,F g,T d):d0(d),f(f),g(g){
-        init(_n);
-    }
+    SegmentTree(F f,F g,T d):d0(d),f(f),g(g){}
     void init(int _n){
         n=1;
         while(n<_n) n*=2;
         vertex.resize(2*n-1,d0);
+    }
+    void build(const std::vector<T> &v){
+        int n_=v.size();
+        init(n_);
+        for(int i=0;i<n_;i++) vertex[n+i-1]=v[i];
+        for(int i=n-2;i>=0;i--)
+        vertex[i]=f(vertex[2*i+1],vertex[2*i+2]);
     }
     void update(int i,T x){
         int k=i+n-1;
