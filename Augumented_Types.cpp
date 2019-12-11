@@ -1,95 +1,83 @@
 #include<iostream>
 typedef long long ll;
 constexpr ll mod=1e9+7;
-class mint{
-  private:
-    ll _num, _mod;
-    mint set(ll num)
-    {
-        _num = num;
-        if (_num >= 0)
-            _num %= _mod;
-        else
-            _num += (1 - (_num + 1) / _mod) * _mod;
-        return *this;
+class mint {
+ private:
+  ll _num,_mod=mod;
+  mint set(ll num){ 
+      _num = num ;
+      if(_num<0){
+          if(_num>=-mod)_num=mod+_num;
+          else _num=mod-(-_num)%mod;
+      }
+      else if(_num>=mod) _num%=mod;
+      return *this;
+  }
+  
+ public:
+  mint(){ _num = 0; }
+  mint(ll num){
+      _num = num;
+      if(_num<0){
+          if(_num>=-mod)_num=mod+_num;
+          else _num=mod-(-_num)%mod;
+      }
+      else if(_num>=mod) _num%=mod;
+  }
+  mint(ll num,ll M){
+      _mod=M;
+      _num=num;
+      if(_num<0){
+          if(_num>=-mod)_num=mod+_num;
+          else _num=mod-(-_num)%mod;
+      }
+      else if(_num>=mod) _num%=mod;
+  }
+  mint(const mint &cp){_num=cp._num;_mod=cp._mod;}
+  ll imod(){
+    ll n=_mod-2;
+    ll ans = 1,x=_num;
+    while(n != 0){
+        if(n&1) ans = ans*x%mod;
+        x = x*x %mod;
+        n = n >> 1;
     }
-    ll _mpow(ll x, ll n)
-    { 
-        ll ans = 1;
-        while (n != 0)
-        {
-            if (n & 1)
-                ans = ans * x % _mod;
-            x = x * x % _mod;
-            n = n >> 1;
-        }
-        return ans;
-    }
-    ll imod(ll n) { return _mpow(n, _mod - 2); }
+    return ans;
+  }
+  mint operator+ (const mint &x){ return mint(_num + x._num , _mod); }
+  mint operator- (const mint &x){ return mint(_num - x._num , _mod);}
+  mint operator* (const mint &x){ return mint(_num * x._num , _mod); }
+  mint operator/ (mint x){ return mint(_num * x.imod() , _mod);}
+  
+  mint operator+=(const mint &x){ return set(_num + x._num); }
+  mint operator-=(const mint &x){ return set(_num - x._num); }
+  mint operator*=(const mint &x){ return set(_num * x._num); }
+  mint operator/=(mint x){ return set(_num * x.imod());}
 
-  public:
-    mint()
-    {
-        _num = 0;
-        _mod = mod;
-    }
-    mint(ll num)
-    {
-        _mod = mod;
-        _num = (num + (1LL << 25) * mod) % mod;
-    }
-    mint(ll num, ll M)
-    {
-        _mod = M;
-        _num = (num + (1LL << 25) * mod) % _mod;
-    }
-    mint(const mint &cp)
-    {
-        _num = cp._num;
-        _mod = cp._mod;
-    }
-    mint operator=(const ll x) { return set(x); }
-    mint operator+(const ll x) { return mint(_num + (x % _mod), _mod); }
-    mint operator-(const ll x) { return mint(_num - (x % _mod), _mod); }
-    mint operator*(const ll x) { return mint(_num * (x % _mod), _mod); }
-    mint operator/(ll x) { return mint(_num * imod(x), _mod); }
-    mint operator+=(const ll x) { return set(_num + (x % _mod)); }
-    mint operator-=(const ll x) { return set(_num - (x % _mod)); }
-    mint operator*=(const ll x) { return set(_num * (x % _mod)); }
-    mint operator/=(ll x) { return set(_num * imod(x)); }
-    mint operator+(const mint &x) { return mint(_num + x._num, _mod); }
-    mint operator-(const mint &x) { return mint(_num - x._num, _mod); }
-    mint operator*(const mint &x) { return mint(_num * x._num, _mod); }
-    mint operator/(mint x) { return mint(_num * imod(x._num), _mod); }
-    mint operator+=(const mint &x) { return set(_num + x._num); }
-    mint operator-=(const mint &x) { return set(_num - x._num); }
-    mint operator*=(const mint &x) { return set(_num * x._num); }
-    mint operator/=(mint x) { return set(_num * imod(x._num)); }
+  mint operator= (const ll x){ return set(x); }
+  mint operator+ (const ll x){return *this + mint(x,_mod); }
+  mint operator- (const ll x){ return *this - mint(x,_mod); }
+  mint operator* (const ll x){ return *this * mint(x,_mod); }
+  mint operator/ (const ll x){ return *this/mint(x);}
 
-    bool operator<(const mint &x) const { return _num < x._num; }
-    bool operator==(const mint &x) const { return _num == x._num; }
-    bool operator>(const mint &x) const { return _num > x._num; }
+  mint operator+=(const ll x){ *this = *this + x;return *this; }
+  mint operator-=(const ll x){ *this = *this - x;return *this; }
+  mint operator*=(const ll x){ *this = *this * x;return *this;}
+  mint operator/=(const ll x){ *this = *this / x;return *this;}
 
-    friend mint operator+(ll x, const mint &m) { return mint(m._num + (x % m._mod), m._mod); }
-    friend mint operator-(ll x, const mint &m) { return mint((x % m._mod) - m._num, m._mod); }
-    friend mint operator*(ll x, const mint &m) { return mint(m._num * (x % m._mod), m._mod); }
-    friend mint operator/(ll x, mint m) { return mint(m.imod(m._num) * x, m._mod); }
+  bool operator==(const mint &x)const{return _num==x._num;}
+  bool operator!=(const mint &x)const{return _num!=x._num;}
 
-    explicit operator ll() { return _num; }
-    explicit operator int() { return (int)_num; }
+  friend mint operator+(ll x,const mint &m){return mint(m._num + x , m._mod);}
+  friend mint operator-(ll x,const mint &m){return mint( x - m._num , m._mod);}
+  friend mint operator*(ll x,const mint &m){return mint(m._num * (x % m._mod) , m._mod);}
+  friend mint operator/(ll x,mint m){return mint(m.imod() * (x % m._mod) , m._mod);}
 
-    friend std::ostream &operator<<(std::ostream &os, const mint &x)
-    {
-        os << x._num;
-        return os;
-    }
-    friend std::istream &operator>>(std::istream &is, mint &x)
-    {
-        ll val;
-        is >> val;
-        x.set(val);
-        return is;
-    }
+  explicit operator ll() { return _num; }
+  explicit operator int() { return (int)_num; }
+  
+  friend std::ostream& operator<<(std::ostream &os, const mint &x){ os << x._num; return os; }
+  friend std::istream& operator>>(std::istream &is, mint &x){ll val; is>>val; x.set(val); return is;}
 };
 struct rational
 {
