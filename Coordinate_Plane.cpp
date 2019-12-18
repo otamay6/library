@@ -83,7 +83,17 @@ struct Line{
     bool online(const Coordinate_Plane &x)const{
         return ((B-A)^(x-A))==0&&(x-A).norm()<=len()&&(x-B).norm()<=len();
     }
-    
+    bool intersect(const Coordinate_Plane &x,const Coordinate_Plane &y){
+        return ((x.x-y.x)*(A.y-x.y) + (x.y-y.y)*(x.x-A.x))*
+                ((x.x-y.x)*(B.y-x.y) + (x.y-y.y)*(x.x-B.x)) < 0;
+    }
+
+    bool Lintersect(const Line &L)const{
+        return  ((L.A.x-L.B.x)*(A.y-L.A.y) + (L.A.y-L.B.y)*(L.A.x-A.x))*
+                ((L.A.x-L.B.x)*(B.y-L.A.y) + (L.A.y-L.B.y)*(L.A.x-B.x))<0&&
+                ((A.x-B.x)*(L.A.y-A.y) + (A.y-B.y)*(A.x-L.A.x))*
+                ((A.x-B.x)*(L.B.y-A.y) + (A.y-B.y)*(A.x-L.B.x))<0;
+    }
     friend std::istream& operator>>(std::istream &is, Line &x){Coordinate_Plane X,Y; is>>X>>Y;x.A=X;x.B=Y;return is;}
     friend std::ostream& operator<<(std::ostream &os, const Line &x){ os << x.A << x.B; return os; }
 };
