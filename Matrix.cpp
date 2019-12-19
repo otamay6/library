@@ -1,3 +1,7 @@
+#include<iostream>
+#include<vector>
+using namespace std;
+
 template<typename T> class MAT{
  private:
     int row,col;
