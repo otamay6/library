@@ -136,3 +136,37 @@ public:
         return true;
     }
 };
+
+template<typename T>
+class DAG{
+  private:
+    int v;
+    std::vector<std::vector<std::pair<int,T>>> to;
+    std::vector<int> rank;
+    std::vector<T> dp;
+  public:
+    DAG(int v,const T &x):v(v){
+        to.resize(v);
+        rank.resize(v);
+        dp.resize(v,x);
+        std::iota(rank.begin(),rank.end(),0);
+    }
+    void add(int a,int b,const T &c=0){
+        to[a].push_back(std::make_pair(b,c));
+        if(rank[a]>rank[b]) std::swap(rank[a],rank[b]);
+    }
+    void set(int i,const T &x){
+        dp[i]=x;
+    }
+    std::vector<T> calc(std::function<T(T,T)> f){
+        std::vector<int> vertex(v);
+        std::vector<T> tmp=dp;
+        for(int i=0;i<v;++i) vertex[rank[i]]=i;
+        for(int i=0;i<v;++i){
+            for(auto e:to[vertex[i]]){
+                tmp[e.first]=f(tmp[e.first],tmp[i]+e.second);
+            }
+        }
+        return tmp;
+    }
+};
