@@ -7,18 +7,18 @@ class mint {
   mint set(ll num){ 
       _num = num ;
       if(_num<0){
-          if(_num>=-mod)_num=mod+_num;
-          else _num=mod-(-_num)%mod;
+          if(_num>=-_mod)_num=_mod+_num;
+          else _num=_mod-(-_num)%_mod;
       }
-      else if(_num>=mod) _num%=mod;
+      else if(_num>=_mod) _num%=_mod;
       return *this;
   }
   ll imod()const{
     ll n=_mod-2;
     ll ans = 1,x=_num;
     while(n != 0){
-        if(n&1) ans = ans*x%mod;
-        x = x*x%mod;
+        if(n&1) ans = ans*x%_mod;
+        x = x*x%_mod;
         n = n >> 1;
     }
     return ans;
@@ -28,19 +28,19 @@ class mint {
   explicit mint(ll num){
       _num = num;
       if(_num<0){
-          if(_num>=-mod)_num=mod+_num;
-          else _num=mod-(-_num)%mod;
+          if(_num>=-_mod)_num=_mod+_num;
+          else _num=_mod-(-_num)%_mod;
       }
-      else if(_num>=mod) _num%=mod;
+      else if(_num>=_mod) _num%=_mod;
   }
   explicit mint(ll num,ll M){
       _mod=M;
       _num=num;
       if(_num<0){
-          if(_num>=-_mod)_num=mod+_num;
-          else _num=mod-(-_num)%_mod;
+          if(_num>=-_mod)_num=_mod+_num;
+          else _num=_mod-(-_num)%_mod;
       }
-      else if(_num>=mod) _num%=_mod;
+      else if(_num>=_mod) _num%=_mod;
   }
   mint(const mint &cp){_num=cp._num;_mod=cp._mod;}
   
