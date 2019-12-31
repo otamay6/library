@@ -170,3 +170,55 @@ class DAG{
         return tmp;
     }
 };
+
+template<typename T>
+class FFT{
+  private:
+    using Complex = std::complex<double>;
+    std::vector<Complex> C;
+    void DFT(std::vector<Complex> &F,int n,int sig=1){
+        if(n==1) return;
+        std::vector<Complex> f0(n/2),f1(n/2);
+        for(int i=0;i<n/2;++i){
+            f0[i]=F[2*i];
+            f1[i]=F[2*i+1];
+        }
+        DFT(f0,n/2,sig);
+        DFT(f1,n/2,sig);
+        Complex z(cos(2.0*PI/n),sin(2.0*PI/n)*sig),zi=1;
+        for(int i=0;i<n;++i){
+            if(i<n/2) F[i]=f0[i]+zi*f1[i];
+            else F[i]=f0[i-n/2]+zi*f1[i-n/2];
+            zi*=z;
+        }
+        return;
+    }
+    void invDFT(std::vector<Complex> &f,int n){
+        DFT(f,n,-1);
+        for(int i=0;i<n;++i){
+            f[i]/=n;
+        }
+        return;
+    }
+  public:
+    FFT(const std::vector<T> &A,const std::vector<T> &B){
+        int n=1;
+        while(n<=A.size()+B.size()){
+            n*=2;
+        }
+        std::vector<Complex> h(n,Complex(0)),g(n,Complex(0));
+        for(int i=0;i<n;++i){
+            if(i<A.size()) h[i]=Complex(A[i]);
+            if(i<B.size()) g[i]=Complex(B[i]);
+        }
+        DFT(h,n);
+        DFT(g,n);
+        C.resize(n);
+        for(int i=0;i<n;++i) C[i]=h[i]*g[i];
+        invDFT(C,n);
+        for(int i=0;i<n;++i) if(T(C[i].real())!=C[i].real()){
+            C[i]=Complex(C[i].real()+0.5);
+        }
+    }
+    T operator[](int k)const{return C[k].real();}
+};
