@@ -37,10 +37,10 @@ class mint {
       _mod=M;
       _num=num;
       if(_num<0){
-          if(_num>=-mod)_num=mod+_num;
-          else _num=mod-(-_num)%mod;
+          if(_num>=-_mod)_num=mod+_num;
+          else _num=mod-(-_num)%_mod;
       }
-      else if(_num>=mod) _num%=mod;
+      else if(_num>=mod) _num%=_mod;
   }
   mint(const mint &cp){_num=cp._num;_mod=cp._mod;}
   
