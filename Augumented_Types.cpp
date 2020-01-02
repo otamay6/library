@@ -160,46 +160,95 @@ template<typename T>
 class Polynomial{//f(x)=a_0+a_1x+a_1x^2+...
     std::vector<T> fx;
   public:
-    Polynomial(std::vector<T> fx={T(1)}):fx(fx){}
+    Polynomial(const std::vector<T> &fx={T(1)}):fx(fx){}
     T operator[](size_t k)const{return fx[k];}
+    size_t size()const{return fx.size();}
+    size_t dim()const{return fx.size()-1;}
+    T back()const{return fx.back();}
     Polynomial operator=(const Polynomial &gx){
-        fx.resize(gx.dim()+1);
+        fx.resize(gx.size());
         for(int i=0;i<fx.size();++i){
             fx[i]=gx[i];
         }
         return *this;
     }
+
     Polynomial operator+(const Polynomial &gx)const{
-        size_t fs=std::max(fx.size(),gx.dim()+1);
+        size_t fs=std::max(fx.size(),gx.size());
         std::vector<T> hx(fs,T(0));
         for(int i=0;i<fs;++i){
             if(i<fx.size()) hx[i]+=fx[i];
-            if(i<gx.dim()+1) hx[i]+=gx[i];
+            if(i<gx.size()) hx[i]+=gx[i];
         }
-        return hx;
+        return Polynomial(hx);
+    }
+    Polynomial operator-(const Polynomial &gx)const{
+        size_t fs=std::max(fx.size(),gx.size());
+        std::vector<T> hx(fs,T(0));
+        for(int i=0;i<fs;++i){
+            if(i<fx.size()) hx[i]+=fx[i];
+            if(i<gx.size()) hx[i]-=gx[i];
+        }
+        return Polynomial(hx);
     }
     Polynomial operator*(const Polynomial &gx)const{
-        size_t fs=dim()+gx.dim()+1;
+        size_t fs=dim()+gx.size();
         std::vector<T> hx(fs,T(0));
         for(int i=0;i<fx.size();++i){
-            for(int j=0;j<=gx.dim();++j){
+            for(int j=0;j<gx.size();++j){
                 hx[i+j]+=fx[i]*gx[j];
             }
         }
-        return hx;
+        return Polynomial(hx);
     }
-    Polynomial operator+=(const Polynomial &gx){*this=*this+gx;return *this;}
-    Polynomial operator*=(const Polynomial &gx){*this=(*this)*gx;return *this;}
+    Polynomial operator/(const Polynomial &gx)const{
+        std::vector<T> hx=fx;
+        std::stack<T> st;
+        while(hx.size()>=gx.size()){
+            T t=hx.back()/gx.back();
+            size_t n=hx.size()-gx.size();
+            hx.pop_back();
+            for(int i=0;i<gx.size()-1;++i){
+                hx[i+n]-=t*gx[i];
+            }
+            st.push(t);
+        }
+        hx.clear();
+        while(!st.empty()){
+            hx.push_back(st.top());
+            st.pop();
+        }
+        return Polynomial(hx);
+    }
+    Polynomial operator%(const Polynomial &gx)const{
+        std::vector<T> hx=fx;
+        while(hx.size()>=gx.size()){
+            T t=hx.back()/gx.back();
+            size_t n=hx.size()-gx.size();
+            hx.pop_back();
+            for(int i=0;i<gx.size()-1;++i){
+                hx[i+n]-=t*gx[i];
+            }
+        }
+        return Polynomial(hx);
+    }
     Polynomial operator*(const T &x){
         for(int i=0;i<fx.size();++i){
             fx[i]*=x;
         }
         return *this;
     }
-    size_t dim()const{return fx.size()-1;}
+    Polynomial operator+=(const Polynomial &gx){*this=*this+gx;return *this;}
+    Polynomial operator-=(const Polynomial &gx){*this=*this-gx;return *this;}
+    Polynomial operator*=(const Polynomial &gx){*this=(*this)*gx;return *this;}
+    Polynomial operator/=(const Polynomial &gx){*this=*this/gx;return *this;}
+    Polynomial operator%=(const Polynomial &gx){*this=*this%gx;return *this;}
+
     T operator()(const T &x)const{
+        if(fx.size()==0) return 0;
+        if(fx.size()==1) return x; 
         T f=fx.back();
-        for(int i=fx.size()-1;i>=0;--i){
+        for(int i=fx.size()-2;i>=0;--i){
             f=f*x+fx[i];
         }
         return f;
@@ -219,16 +268,19 @@ class Polynomial{//f(x)=a_0+a_1x+a_1x^2+...
         fx.pop_back();
         return *this;
     }
-    T cintegrate(const T &a,const T &b){
-        T d=fx.back()/dim(),u=fx.back()/dim();
+    T cintegrate(const T &a,const T &b)const{
+        if(fx.size()<=1) return 0;
+        T d=fx.back()/size(),u=fx.back()/size();
         for(int i=fx.size()-1;i>0;--i){
             d=d*a+fx[i-1]/i;
             u=u*b+fx[i-1]/i;
         }
+        d*=a;
+        u*=b;
         return u-d;
     }
     friend std::ostream& operator<<(std::ostream &os, const Polynomial &gx){
-        for(int i=0;i<gx.dim()+1;++i){
+        for(int i=0;i<gx.size();++i){
             os << gx[i] << "x^" <<i;
             if(i!=gx.dim()) os<<" + ";
         }
