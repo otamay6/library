@@ -158,7 +158,33 @@ struct rational
 
 template<typename T>
 class Polynomial{//f(x)=a_0+a_1x+a_1x^2+...
+    const double PI=acos(-1);
     std::vector<T> fx;
+    using Complex=complex<double>;
+    void DFT(std::vector<Complex> &F,int n,int sig=1)const{
+        if(n==1) return;
+        std::vector<Complex> f0(n/2),f1(n/2);
+        for(int i=0;i<n/2;++i){
+            f0[i]=F[2*i];
+            f1[i]=F[2*i+1];
+        }
+        DFT(f0,n/2,sig);
+        DFT(f1,n/2,sig);
+        Complex z(cos(2.0*PI/n),sin(2.0*PI/n)*sig),zi=1;
+        for(int i=0;i<n;++i){
+            if(i<n/2) F[i]=f0[i]+zi*f1[i];
+            else F[i]=f0[i-n/2]+zi*f1[i-n/2];
+            zi*=z;
+        }
+        return;
+    }
+    void invDFT(std::vector<Complex> &f,int n)const{
+        DFT(f,n,-1);
+        for(int i=0;i<n;++i){
+            f[i]/=n;
+        }
+        return;
+    }
   public:
     Polynomial(const std::vector<T> &fx={T(1)}):fx(fx){}
     T operator[](size_t k)const{return fx[k];}
@@ -191,13 +217,27 @@ class Polynomial{//f(x)=a_0+a_1x+a_1x^2+...
         }
         return Polynomial(hx);
     }
+    
     Polynomial operator*(const Polynomial &gx)const{
         size_t fs=dim()+gx.size();
-        std::vector<T> hx(fs,T(0));
-        for(int i=0;i<fx.size();++i){
-            for(int j=0;j<gx.size();++j){
-                hx[i+j]+=fx[i]*gx[j];
-            }
+        int n=1;
+        while(n<=fx.size()+gx.size()){
+            n*=2;
+        }
+        std::vector<Complex> f(n,Complex(0)),g=f;
+        int i_len=std::max(fx.size(),gx.size());
+        for(int i=0;i<i_len;++i){
+            if(i<fx.size()) f[i]=fx[i];
+            if(i<gx.size()) g[i]=gx[i];
+        }
+        DFT(f,n);
+        DFT(g,n);
+        for(int i=0;i<n;++i) f[i]=f[i]*g[i];
+        invDFT(f,n);
+        std::vector<T> hx(fs);
+        for(int i=0;i<fs;++i){
+            if(T(f[i].real())!=f[i].real()) hx[i]=f[i].real()+0.5;
+            else hx[i]=f[i].real();
         }
         return Polynomial(hx);
     }
