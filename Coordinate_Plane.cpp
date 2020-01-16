@@ -46,7 +46,7 @@ struct Coordinate_Plane{
         }
     }
     friend std::istream& operator>>(std::istream &is, Coordinate_Plane &x){double valX,valY; is>>valX>>valY; x.set(valX,valY); return is;}
-    friend std::ostream& operator<<(std::ostream &os, const Coordinate_Plane &v){ os << v.x<<" "<<v.y<<endl; return os; }
+    friend std::ostream& operator<<(std::ostream &os, const Coordinate_Plane &v){ printf("%.6f %.6f",v.x,v.y); return os; }
     double norm2()const{return x*x+y*y;}
     double norm()const{return sqrt(norm2());}
     double rad()const{
@@ -81,7 +81,7 @@ struct Line{
         return (x-shortest_point(x)).norm();
     }
     bool online(const Coordinate_Plane &x)const{
-        return ((B-A)^(x-A))==0&&(x-A).norm()<=len()&&(x-B).norm()<=len();
+        return fabs((B-A)^(x-A))<eps&&(x-A).norm()<len()+eps&&(x-B).norm()<len()+eps;
     }
     bool intersect(const Coordinate_Plane &x,const Coordinate_Plane &y){
         return ((x.x-y.x)*(A.y-x.y) + (x.y-y.y)*(x.x-A.x))*
@@ -95,7 +95,7 @@ struct Line{
                 ((A.x-B.x)*(L.B.y-A.y) + (A.y-B.y)*(A.x-L.B.x))<0;
     }
     friend std::istream& operator>>(std::istream &is, Line &x){Coordinate_Plane X,Y; is>>X>>Y;x.A=X;x.B=Y;return is;}
-    friend std::ostream& operator<<(std::ostream &os, const Line &x){ os << x.A << x.B; return os; }
+    friend std::ostream& operator<<(std::ostream &os, const Line &x){ os << x.A <<" "<< x.B; return os; }
 };
 struct Triangle{
     Coordinate_Plane a,b,c;
@@ -129,4 +129,26 @@ struct Triangle{
 
     friend std::istream& operator>>(std::istream &is, Triangle &x){Coordinate_Plane X,Y,Z; is>>X>>Y>>Z; x.a=X;x.b=Y;x.c=Z;return is;}
     friend std::ostream& operator<<(std::ostream &os, const Triangle &v){ os << v.a << v.b; return os; }
+};
+struct Circle{
+    Coordinate_Plane center;
+    double radius;
+    Circle(double r=0,Coordinate_Plane c={0,0}):radius(r),center(c){}
+    bool inside(const Coordinate_Plane &C)const{
+        return (C-center).norm2()<radius*radius+eps;
+    }
+    bool intersect(const Circle &C)const{
+        return (C.center-center).norm2()<(C.radius+radius)*(C.radius+radius)+eps;
+    }
+    std::pair<Coordinate_Plane,Coordinate_Plane> interP(const Circle &C)const{
+        Coordinate_Plane Q=center-C.center;
+        double x1=Q.x,y1=Q.y,r1=radius,r2=C.radius;
+        double a=(x1*x1+y1*y1+r1*r1-r2*r2)/2.0,t=Q.norm2();
+        Coordinate_Plane A((a*x1+y1*sqrt(t*r1*r1-a*a))/t,(a*y1-x1*sqrt(t*r1*r1-a*a))/t);
+        Coordinate_Plane B((a*x1-y1*sqrt(t*r1*r1-a*a))/t,(a*y1+x1*sqrt(t*r1*r1-a*a))/t);
+        A+=C.center;
+        B+=C.center;
+        return std::make_pair(A,B);
+    }
+    friend std::ostream& operator<<(std::ostream &os, const Circle &v){ os << v.center<<" ";printf("%.06f",v.radius); return os; }
 };
