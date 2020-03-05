@@ -193,3 +193,71 @@ template<typename T> class MAT{
         return r;
     }
 };
+
+template<typename T>
+struct CSR{
+    std::map<std::pair<int,int>,T> List;
+    std::vector<T> A,IA,JA,nIA;
+    int H,W;
+    CSR(int H,int W):H(H),W(W){}
+    CSR(const CSR &X){*this=X;}
+    void add_val(int row,int col,T val){
+        List[std::make_pair(row,col)] += val;
+    }
+    CSR Unit()const{
+        CSR res(H,W);
+        for(int i=0;i<H;++i){
+            res.add_val(i,i,1);
+        }
+        res.compress();
+        return res;
+    }
+    void compress(){
+        int N=List.size();
+        A.resize(N);
+        IA.resize(N);
+        JA.resize(N);
+        int ind=0;
+        for(auto L:List){
+            std::pair<int,int> pos=L.first;
+            A[ind]=L.second;
+            IA[ind]=pos.first;
+            JA[ind]=pos.second;
+            ind++;
+        }
+        nIA.resize(H+1,List.size());
+        for(int i=0,r=0;i<IA.size();++i){
+            while(r<=IA[i]){
+                nIA[r]=i;
+                r++;
+            }
+        }
+    }
+    CSR operator*(const CSR &X)const{
+        if(W!=X.H){
+            std::cerr << "err Matrix::operator*" <<std::endl;
+            std::cerr << "  not equal matrix size" <<std::endl;
+            exit(0);
+        }
+        CSR res(H,X.W);
+        for(int i=0;i<H;++i){
+            for(int j=nIA[i];j<nIA[i+1];++j){
+                int k=JA[j];
+                for(int t=X.nIA[k];t<X.nIA[k+1];++t){
+                    res.add_val(i,X.JA[t],A[j]*X.A[t]);
+                }
+            }
+        }
+        res.compress();
+        return res;
+    }
+    friend std::ostream& operator<<(std::ostream &os,CSR &X){
+        for(int i=0;i<X.H;++i) for(int j=0;j<X.W;++j){
+            std::pair<int,int> p=std::make_pair(i,j);
+            if(X.List.count(p)) os<<X.List[p];
+            else os<<0;
+            os<<" \n"[j+1==X.W&&i+1<X.H];
+        }
+        return os;
+    }
+};
