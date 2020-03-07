@@ -1,4 +1,5 @@
 #include<vector>
+#include<queue>
 #include<utility>
 #include<functional>
 template<typename T> class SegmentTree{
@@ -45,11 +46,11 @@ template<typename T> class SegmentTree{
 };
 class UnionFind
 { //UnionFind木
-private:
+  private:
     std::vector<int> Parent, es;
     std::vector<long long> diff_weight;
 
-public:
+  public:
     UnionFind(int N)
     {
         es.resize(N, 0);
@@ -136,6 +137,101 @@ public:
         return true;
     }
 };
+
+class HLD{
+  private:
+    using Graph=std::vector<std::vector<int>>;
+    int root,N;
+    std::vector<int> size,par,Restore,newid,front,next,Depth;
+    int dfs(int u,Graph &graph){
+        int cnt=1,MAX=0;
+        for(auto v:graph[u]){
+            if(v==par[u]) continue;
+            par[v]=u;
+            cnt+=dfs(v,graph);
+            if(size[v]>MAX){
+                MAX=size[v];
+                next[u]=v;
+            }
+        }
+        return size[u]=cnt;
+    }
+    void hld(int r,Graph &graph){
+        std::queue<int> que;
+        int id=0;
+        que.push(r);
+        while(!que.empty()){
+            int u=que.front();que.pop();
+            newid[u]=id;
+            Restore[id++]=u;
+            front[u]=u;
+            while(next[u]!=-1){
+                for(auto v:graph[u]){
+                    if(v==par[u]) continue;
+                    if(v!=next[u]){
+                        Depth[v]=Depth[u]+1;
+                        que.push(v);
+                    }
+                    else{
+                        newid[v]=id;
+                        Restore[id++]=v;
+                        front[v]=front[u];
+                        Depth[v]=Depth[u];
+                    }
+                }
+                u=next[u];
+            }
+        }
+    }
+  public:
+    HLD(Graph &g,int root=0):
+    root(root),N(g.size()),size(N),par(N,-1),Restore(N),newid(N),front(N),next(N,-1),Depth(N){
+        dfs(root,g);
+        hld(root,g);
+    }
+    int lca(int u,int v)const{
+        while(front[u]!=front[v]){
+            if(Depth[u]>Depth[v]) std::swap(u,v);
+            v = par[front[v]];
+        }
+        return newid[u]<newid[v]?u:v;
+    }
+    std::vector<std::pair<int,int>> vquery(int u,int v){
+        std::vector<std::pair<int,int>> res;
+        int rt=lca(u,v);
+        while(Depth[rt]<Depth[u]){
+            res.emplace_back(newid[front[u]],newid[u]);
+            u = par[front[u]];
+        }
+        while(Depth[rt]<Depth[v]){
+            res.emplace_back(newid[front[v]],newid[v]);
+            v = par[front[v]];
+        }
+        res.emplace_back(newid[rt],std::max(newid[u],newid[v]));
+        return res;
+    }
+    std::vector<std::pair<int,int>> equery(int u,int v){
+        //頂点idから親に向かう辺の番号をid-1とする
+        std::vector<std::pair<int,int>> res;
+        int rt=lca(u,v);
+        while(Depth[rt]<Depth[u]){
+            res.emplace_back(newid[front[u]]-1,newid[u]-1);
+            u = par[front[u]];
+        }
+        while(Depth[rt]<Depth[v]){
+            res.emplace_back(newid[front[v]]-1,newid[v]-1);
+            v = par[front[v]];
+        }
+        int R = std::max(newid[u],newid[v]);
+        if(newid[rt]!=R) res.emplace_back(newid[rt],R-1);
+        return res;
+    }
+    int id(int u)const{return newid[u];}
+    int restore(int id)const{return Restore[id];}
+    int depth(int u)const{return Depth[u];}
+    int parent(int u)const{return par[u];}
+};
+
 
 template<typename T>
 class DAG{
