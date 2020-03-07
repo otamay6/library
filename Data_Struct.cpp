@@ -196,7 +196,7 @@ class HLD{
         }
         return newid[u]<newid[v]?u:v;
     }
-    std::vector<std::pair<int,int>> vquery(int u,int v){
+    std::vector<std::pair<int,int>> vquery(int u,int v)const{
         std::vector<std::pair<int,int>> res;
         int rt=lca(u,v);
         while(Depth[rt]<Depth[u]){
@@ -210,7 +210,7 @@ class HLD{
         res.emplace_back(newid[rt],std::max(newid[u],newid[v]));
         return res;
     }
-    std::vector<std::pair<int,int>> equery(int u,int v){
+    std::vector<std::pair<int,int>> equery(int u,int v)const{
         //頂点idから親に向かう辺の番号をid-1とする
         std::vector<std::pair<int,int>> res;
         int rt=lca(u,v);
@@ -227,11 +227,10 @@ class HLD{
         return res;
     }
     int id(int u)const{return newid[u];}
-    int restore(int id)const{return Restore[id];}
+    int restore(int ID)const{return Restore[ID];}
     int depth(int u)const{return Depth[u];}
     int parent(int u)const{return par[u];}
 };
-
 
 template<typename T>
 class DAG{
