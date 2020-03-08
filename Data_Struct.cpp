@@ -1,5 +1,6 @@
 #include<vector>
 #include<queue>
+#include<stack>
 #include<utility>
 #include<functional>
 template<typename T> class SegmentTree{
@@ -142,13 +143,14 @@ class HLD{
   private:
     using Graph=std::vector<std::vector<int>>;
     int root,N;
-    std::vector<int> size,par,Restore,newid,front,next,Depth;
-    int dfs(int u,Graph &graph){
+    std::vector<int> size,par,Restore,newid,front,next,Depth,leaf;
+    Graph graph;
+    int dfs(int u){
         int cnt=1,MAX=0;
         for(auto v:graph[u]){
             if(v==par[u]) continue;
             par[v]=u;
-            cnt+=dfs(v,graph);
+            cnt+=dfs(v);
             if(size[v]>MAX){
                 MAX=size[v];
                 next[u]=v;
@@ -156,12 +158,12 @@ class HLD{
         }
         return size[u]=cnt;
     }
-    void hld(int r,Graph &graph){
-        std::queue<int> que;
+    void hld(int r){
+        std::stack<int> que;
         int id=0;
         que.push(r);
         while(!que.empty()){
-            int u=que.front();que.pop();
+            int u=que.top();que.pop();
             newid[u]=id;
             Restore[id++]=u;
             front[u]=u;
@@ -184,10 +186,10 @@ class HLD{
         }
     }
   public:
-    HLD(Graph &g,int root=0):
-    root(root),N(g.size()),size(N),par(N,-1),Restore(N),newid(N),front(N),next(N,-1),Depth(N){
-        dfs(root,g);
-        hld(root,g);
+    HLD(Graph &g,int root=0):graph(g),root(root),N(g.size()),
+    size(N),par(N,-1),Restore(N),newid(N),front(N),next(N,-1),Depth(N),leaf(N,-1){
+        dfs(root);
+        hld(root);
     }
     int lca(int u,int v)const{
         while(front[u]!=front[v]){
@@ -225,6 +227,16 @@ class HLD{
         int R = std::max(newid[u],newid[v]);
         if(newid[rt]!=R) res.emplace_back(newid[rt],R-1);
         return res;
+    }
+    std::pair<int,int> tquery(int u){
+        if(leaf[u]!=-1) return std::make_pair(newid[u],leaf[u]);
+        leaf[u]=newid[u];
+        for(auto v:graph[u]){
+            if(v==par[u]) continue;
+            tquery(v);
+            leaf[u]=std::max(leaf[u],leaf[v]);
+        }
+        return std::make_pair(newid[u],leaf[u]);
     }
     int id(int u)const{return newid[u];}
     int restore(int ID)const{return Restore[ID];}
