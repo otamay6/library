@@ -39,8 +39,8 @@ template<typename T> class SegmentTree{
         l+=n-1;
         r+=n-1;
         for(;l<=r;l/=2,r=r/2-1){
-            if(l%2==0) vl=f(vl,vertex[l]);
-            if(r&1) vr=f(vr,vertex[r]);
+            if(~l&1) vl=f(vl,vertex[l]);
+            if(r&1) vr=f(vertex[r],vr);
         }
         return f(vl,vr);
     }
