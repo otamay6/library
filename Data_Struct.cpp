@@ -441,7 +441,95 @@ class FFT{
     }
     T operator[](int k)const{return T(C[k].real());}
 };
+template<class T>
+class Treap{
+    private:
+        std::mt19937 mt{time(NULL)};
+        std::uniform_real_distribution<double> rnd{0.0,1.0};
+        struct node_t{
+            T val;
+            node_t *lch;
+            node_t *rch;
+            int pri;
+            int cnt;
+            T sum;
+            node_t(T v,double p):val(v),pri(p),cnt(1),sum(v){
+                lch=rch=NULL;
+            }
+        };
+        node_t *root=NULL;
+        int count(node_t *t){return !t?0:t->cnt;}
+        T sum(node_t *t){return !t?0:t->sum;}
+        node_t *update(node_t *t){
+            t->cnt = count(t->lch) + count(t->rch) + 1;
+            t->sum = sum(t->lch) + sum(t->rch) + t->val;
+            return t;
+        }
+        node_t *merge(node_t *l,node_t *r){
+            if(!l||!r) return !l?r:l;
 
+            if(l->pri > r->pri){
+                l->rch = merge(l->rch,r);
+                return update(l);
+            }
+            else{
+                r->lch = merge(l,r->lch);
+                return update(r);
+            }
+        }
+        std::pair<node_t*,node_t*> split(node_t *t,int k){
+            using P = std::pair<node_t*,node_t*>;
+            if(!t) return P(NULL,NULL);
+
+            if(k <= count(t->lch)){
+                P s = split(t->lch,k);
+                t->lch = s.second;
+                return P(s.first,update(t));
+            }
+            else{
+                P s = split(t->rch,k-count(t->lch)-1);
+                t->rch = s.first;
+                return P(update(t),s.second);
+            }
+        }
+        node_t *insert(node_t *t,int k,T val){
+            double pri=rnd(mt);
+            std::pair<node_t*,node_t*> s=split(t,k);
+            return merge(t,merge(node_t(val,pri),s.second));
+        }
+        node_t *erase(node_t *t,int k){
+            std::pair<node_t*,node_t*> s=split(t,k-1);
+            s = split(s.second,1);
+            return merge(t,s.second);
+        }
+        int find(node_t *t,T key){
+            if(!t) return -1;
+            if(t->val==key) return count(t);
+            return key < t->val ? find(t->lch, key) : find(t->rch,key)+count(t->lch)+1;
+        }
+    public:
+        void merge(Treap b){
+            *this.root = merge(*this.root,b);
+        }
+        Treap split(int k){
+            Treap res;
+            std::pair<node_t*,node_t*> s=split(*this.root,k);
+            *this.root=s.first;
+            res.root=s.second;
+            return res;
+        }
+        int find(int key){return count(root)-find(root,key);}
+        void insert(T val){
+            int k = find(val);
+            root = insert(root,k,val);
+        }
+        void erase(T val){
+            int k=find(val);
+            if(k==-1) return;
+            root = erase(root,k);
+        }
+        
+};
 /*封印
 template<std::uint_fast64_t p=100000>
 class MultiInt{
