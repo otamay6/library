@@ -503,8 +503,12 @@ class Treap{
             s = split(s.second,1);
             return merge(t,s.second);
         }
+        int find(node_t *t,T key){
+            if(!t) return -1;
+            if(t->val==key) return count(t);
+            return key < t->val ? find(t->lch, key) : find(t->rch,key)+count(t->lch)+1;
+        }
     public:
-        
         void merge(Treap b){
             *this.root = merge(*this.root,b);
         }
@@ -515,13 +519,19 @@ class Treap{
             res.root=s.second;
             return res;
         }
-        void insert(int k,T val){
+        int find(int key){return count(root)-find(root,key);}
+        void insert(T val){
+            int k = find(val);
             root = insert(root,k,val);
         }
-        void erase(int k){
+        void erase(T val){
+            int k=find(val);
+            if(k==-1) return;
             root = erase(root,k);
         }
+        
 };
+
 /*封印
 template<std::uint_fast64_t p=100000>
 class MultiInt{
