@@ -3,7 +3,7 @@ typedef long long ll;
 constexpr ll mod=1e9+7;
 class mint {
  private:
-  ll _num,_mod=mod;
+  ll _num,_mod = mod;
   mint set(ll num){ 
       _num = num ;
       if(_num<0){
@@ -58,7 +58,7 @@ class mint {
   mint operator+ (const ll x)const{return *this + mint(x,_mod); }
   mint operator- (const ll x)const{ return *this - mint(x,_mod); }
   mint operator* (const ll x)const{ return *this * mint(x,_mod); }
-  mint operator/ (const ll x)const{ return *this/mint(x);}
+  mint operator/ (const ll x)const{ return *this/mint(x, _mod);}
 
   mint operator+=(const ll x){ *this = *this + x;return *this; }
   mint operator-=(const ll x){ *this = *this - x;return *this; }
@@ -79,6 +79,7 @@ class mint {
   friend std::ostream& operator<<(std::ostream &os, const mint &x){ os << x._num; return os; }
   friend std::istream& operator>>(std::istream &is, mint &x){ll val; is>>val; x.set(val); return is;}
 };
+
 struct rational
 {
     long long p, q;
