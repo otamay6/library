@@ -144,3 +144,32 @@ class SegmentTree
     end
 end
 
+class UnionFind
+    @par
+    def initialize(n)
+        @par = Array.new(n,-1)
+    end
+
+    def root(x)
+        return x if @par[x]<0
+        return @par[x] = root(@par[x])
+    end
+
+    def size(x)
+        return -@par[root(x)]
+    end
+
+    def issame(a,b)
+        return root(a)==root(b)
+    end
+
+    def connect(a,b)
+        a = root(a)
+        b = root(b)
+        return false if a==b
+        if size(a)<size(b) then a,b = b,a end
+        @par[a] += @par[b]
+        @par[b] = a
+        return true
+    end
+end
