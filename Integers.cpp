@@ -6,6 +6,7 @@ typedef long long ll;
 constexpr ll mod=1e9+7;
 ll npow(ll x, ll n){
     ll ans = 1;
+    if( x == 0 ) return 0;
     while(n != 0){
         if(n&1) ans = ans*x;
         x = x*x;
@@ -15,6 +16,8 @@ ll npow(ll x, ll n){
 }
 ll mpow(ll x, ll n){ //x^n(mod) ←普通にpow(x,n)では溢れてしまうため，随時mod計算 2分累乗法だから早い
     ll ans = 1;
+    x %= mod;
+    if( x == 0 ) return 0;
     while(n != 0){
         if(n&1) ans = ans*x % mod;
         x = x*x % mod;
