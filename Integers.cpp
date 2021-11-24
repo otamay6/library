@@ -63,6 +63,7 @@ class Prime_Numbers{
     int back(){return PN.back();}
     bool isPrime(int q){return isp[q];}
 };
+
 class Divisor
 { //素因数分解をしてから約数列挙、分解結果はＰ(底,指数)でpfacにまとめている
 private:
@@ -95,6 +96,7 @@ public:
     std::vector<std::pair<int,int>> pfac() { return pfactorize; }
     long long operator[](int k) { return F[k]; }
 };
+
 class Factorial
 { //階乗とその逆元を求めて計算に利用するクラス
   private:
