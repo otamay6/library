@@ -496,95 +496,360 @@ class FFT{
     }
     T operator[](int k)const{return T(C[k].real());}
 };
+
+/// @brief Treap
+/// @tparam T : キーの型
 template<class T>
-class Treap{
-    private:
-        std::mt19937 mt{time(NULL)};
-        std::uniform_real_distribution<double> rnd{0.0,1.0};
-        struct node_t{
-            T val;
-            node_t *lch;
-            node_t *rch;
-            int pri;
-            int cnt;
-            T sum;
-            node_t(T v,double p):val(v),pri(p),cnt(1),sum(v){
-                lch=rch=NULL;
-            }
-        };
-        node_t *root=NULL;
-        int count(node_t *t){return !t?0:t->cnt;}
-        T sum(node_t *t){return !t?0:t->sum;}
-        node_t *update(node_t *t){
-            t->cnt = count(t->lch) + count(t->rch) + 1;
-            t->sum = sum(t->lch) + sum(t->rch) + t->val;
-            return t;
-        }
-        node_t *merge(node_t *l,node_t *r){
-            if(!l||!r) return !l?r:l;
+class Treap {
+    std::random_device rd;
+    std::mt19937 mt;
 
-            if(l->pri > r->pri){
-                l->rch = merge(l->rch,r);
-                return update(l);
-            }
-            else{
-                r->lch = merge(l,r->lch);
-                return update(r);
-            }
-        }
-        std::pair<node_t*,node_t*> split(node_t *t,int k){
-            using P = std::pair<node_t*,node_t*>;
-            if(!t) return P(NULL,NULL);
+    struct Node{
+        T key;
+        int priority;
+        Node *l;
+        Node *r;
+        Node(T key, int priority)
+        :key(key),priority(priority), l(nullptr),r(nullptr) {
 
-            if(k <= count(t->lch)){
-                P s = split(t->lch,k);
-                t->lch = s.second;
-                return P(s.first,update(t));
+        }
+    };
+    Node *root;
+    void deconstruct(Node *root) {
+        if(root->l) deconstruct(root->l);
+        if(root->r) deconstruct(root->r);
+        delete root;
+    }
+    /// @brief Nodeをkeyで左右に分割する
+    /// @param root Treapの根
+    /// @param key 
+    /// @param l 左の部分木
+    /// @param r 右の部分木
+    void split(Node *root, T key, Node **l, Node **r) {
+        if(!root) {
+            *l = *r = nullptr;
+        }
+        else if(key < root->key) {
+            split(root->l, key, l, root->l);
+            *r = root;
+        }
+        else {
+            split(root->r, key, root->r, r);
+            *l = root;
+        }
+    }
+
+    void insert(Node **root, Node *item) {
+        if(!root) {
+            *root = item;
+        }
+        else if(item->priority > root->priority){
+            split(root, item->key, &(item->l), &(item->r));
+            *root = item;
+        } else {
+            if(item->key < root->key) {
+                insert(root->l, item);
             }
-            else{
-                P s = split(t->rch,k-count(t->lch)-1);
-                t->rch = s.first;
-                return P(update(t),s.second);
+            else {
+                insert(root->r, item);
             }
         }
-        node_t *insert(node_t *t,int k,T val){
-            double pri=rnd(mt);
-            std::pair<node_t*,node_t*> s=split(t,k);
-            return merge(t,merge(node_t(val,pri),s.second));
+    }
+
+    void merge(Node **root, Node *left, Node *right) {
+        if(!left) {
+            *root = right;
         }
-        node_t *erase(node_t *t,int k){
-            std::pair<node_t*,node_t*> s=split(t,k-1);
-            s = split(s.second,1);
-            return merge(t,s.second);
+        else if(!right) {
+            *root = left;
         }
-        int find(node_t *t,T key){
-            if(!t) return -1;
-            if(t->val==key) return count(t);
-            return key < t->val ? find(t->lch, key) : find(t->rch,key)+count(t->lch)+1;
+        else if(left->priority, right->priority) {
+            merge(left->r, left->r, right);
+            *root = left;
         }
-    public:
-        void merge(Treap b){
-            *this.root = merge(*this.root,b);
+        else {
+            merge(right->l, left, right->l);
+            *root = right;
         }
-        Treap split(int k){
-            Treap res;
-            std::pair<node_t*,node_t*> s=split(*this.root,k);
-            *this.root=s.first;
-            res.root=s.second;
-            return res;
+    }
+
+    void erase(Node **root, T key) {
+        if(*root->key == key) {
+            merge(root, *root->l, *root->r);
         }
-        int find(int key){return count(root)-find(root,key);}
-        void insert(T val){
-            int k = find(val);
-            root = insert(root,k,val);
+        else {
+            if(key < *root->key) {
+                erase(*root->l, key);
+            }
+            else {
+                erase(*root->r, key);
+            }
         }
-        void erase(T val){
-            int k=find(val);
-            if(k==-1) return;
-            root = erase(root,k);
+    }
+
+    bool find(Node *root, T key) {
+        if(!root) {
+            return false;
         }
-        
+        else if(root->key == key) {
+            return true;
+        }
+        else {
+            if(key < root->key){
+                return find(root->l, key);
+            }
+            else {
+                return find(root->r, key);
+            }
+        }
+    }
+
+public:
+    Treap() :mt(rd()), root(nullptr){};
+    ~Treap() { deconstruct(root); }
+    /// @brief keyを持つノードを挿入する
+    /// @param key 
+    void insert(T key) {
+        insert(&root, new Node(key, mt()));
+    }
+
+    /// @brief keyを持つノードを1つ削除する
+    /// @param key 
+    void erase(T key) {
+        erase(&root, key);
+    }
+
+    /// @brief keyが存在するか判定する
+    /// @param key 
+    /// @return 
+    bool find(T key) {
+        return find(root, key);
+    }
 };
+
+/// @brief 操作をO(logN)でできる配列(insert, erase, reverse, rotate, range min, range add)
+/// @tparam T : 配列要素の型
+template<class T>
+class ImplicitTreap {
+    std::random_device rd;
+    std::mt19937 mt;
+    T INF;
+    struct Node {
+        T value, min, lazy;
+        int priority, cnt;
+        bool rev;
+        Node *l, *r;
+        Node(int value, int priority, T INF)
+        : value(value), min(INF), lazy(0), priority(priority), cnt(1), rev(false), l(nullptr), r(nullptr) 
+        {
+
+        }
+    } *root = nullptr;
+    using Tree = Node *;
+
+    int cnt(Tree t) {
+        return t ? t->cnt : 0;
+    }
+
+    int get_min(Tree t) {
+        return t ? t->min : INF;
+    }
+
+    void update_cnt(Tree t) {
+        if (t) {
+            t->cnt = 1 + cnt(t->l) + cnt(t->r);
+        }
+    }
+
+    void update_min(Tree t) {
+        if (t) {
+            t->min = min(t->value, min(get_min(t->l), get_min(t->r)));
+        }
+    }
+
+    void pushup(Tree t) {
+        update_cnt(t), update_min(t);
+    }
+
+    void pushdown(Tree t) {
+        if (t && t->rev) {
+            t->rev = false;
+            swap(t->l, t->r);
+            if (t->l) t->l->rev ^= 1;
+            if (t->r) t->r->rev ^= 1;
+        }
+        if (t && t->lazy) {
+            if (t->l) {
+                t->l->lazy += t->lazy;
+                t->l->min += t->lazy;
+            }
+            if (t->r) {
+                t->r->lazy += t->lazy;
+                t->r->min += t->lazy;
+            }
+            t->value += t->lazy;
+            t->lazy = 0;
+        }
+        pushup(t);
+    }
+    
+    void split(Tree t, int key, Tree& l, Tree& r) {
+        if (!t) {
+            l = r = nullptr;
+            return;
+        }
+        pushdown(t);
+        int implicit_key = cnt(t->l) + 1;
+        if (key < implicit_key) {
+            split(t->l, key, l, t->l), r = t;
+        } else {
+            split(t->r, key - implicit_key, t->r, r), l = t;
+        }
+        pushup(t);
+    }
+    
+    void insert(Tree& t, int key, Tree item) {
+        Tree t1, t2;
+        split(t, key, t1, t2);
+        merge(t1, t1, item);
+        merge(t, t1, t2);
+    }
+
+    void merge(Tree& t, Tree l, Tree r) {
+        pushdown(l);
+        pushdown(r);
+        if (!l || !r) {
+            t = l ? l : r;
+        } else if (l->priority > r->priority) {
+            merge(l->r, l->r, r), t = l;
+        } else {
+            merge(r->l, l, r->l), t = r;
+        }
+        pushup(t);
+    }
+    
+    void erase(Tree& t, int key) {
+        Tree t1, t2, t3;
+        split(t, key + 1, t1, t2);
+        split(t1, key, t1, t3);
+        merge(t, t1, t2);
+    }
+
+    void add(Tree t, int l, int r, T x) {
+        Tree t1, t2, t3;
+        split(t, l, t1, t2);
+        split(t2, r - l, t2 , t3);
+        t2->lazy += x;
+        t2->min += x;
+        merge(t2, t2, t3);
+        merge(t, t1, t2);
+    }
+
+    int findmin(Tree t, int l, int r) {
+        Tree t1, t2, t3;
+        split(t, l, t1, t2);
+        split(t2, r - l, t2, t3);
+        T ret = t2->min;
+        merge(t2, t2, t3);
+        merge(t, t1, t2);
+        return ret;
+    }
+
+    void reverse(Tree t, int l, int r) {
+        if (l > r) return;
+        Tree t1, t2, t3;
+        split(t, l, t1, t2);
+        split(t2, r - l, t2, t3);
+        t2->rev ^= 1;
+        merge(t2, t2, t3);
+        merge(t, t1, t2);
+    }
+
+    // [l, r)の先頭がmになるように左シフトさせる。std::rotateと同じ仕様
+    void rotate(Tree t, int l, int m, int r) {
+        reverse(t, l, r);
+        reverse(t, l, l + r - m);
+        reverse(t, l + r - m, r);
+    }
+
+    void dump(Tree t) {
+        if (!t) return;
+        pushdown(t);
+        dump(t->l);
+        cout << t->value << " ";
+        dump(t->r);
+    }
+    
+public:
+    ImplicitTreap(): mt(rd()), INF() {}
+    explicit ImplicitTreap(T t_max)
+    :ImplicitTreap(){ INF = t_max;}
+
+    ImplicitTreap(std::vector<T> array, T t_max)
+    :ImplicitTreap(t_max) {
+        for(size_t idx = 0; idx < array.size(); idx++) {
+            insert(idx, array[idx]);
+        }
+    }
+
+    /// @brief posの前にxを追加する
+    /// @param pos 
+    /// @param x 
+    void insert(int pos, T x) {
+        insert(root, pos, new Node(x, mt(), INF));
+    }
+
+    /// @brief [l, r)の範囲にxを加算する
+    /// @param l 
+    /// @param r 
+    /// @param x 
+    void add(int l, int r, T x) {
+        add(root, l, r, x);
+    }
+
+    /// @brief [l, r)の範囲の最小値を探索する
+    /// @param l 
+    /// @param r 
+    /// @return [l, r)内の最小値
+    int findmin(int l, int r) {
+        return findmin(root, l, r);
+    }
+
+    /// @brief posの位置にある要素を削除する
+    /// @param pos 
+    void erase(int pos) {
+        erase(root, pos);
+    }
+
+    /// @brief [l, r)の範囲を反転する
+    /// @param l 
+    /// @param r 
+    void reverse(int l, int r) {
+        reverse(root, l, r);
+    }
+
+    /// @brief [l, r)の範囲を、mが先頭に来るように回転する
+    /// @param l 
+    /// @param m 
+    /// @param r 
+    void rotate(int l, int m, int r) {
+        rotate(root, l, m, r);
+    }
+
+    T at(int pos) {
+
+    }
+
+    void dump() {
+        dump(root);
+        cout << endl;
+    }
+
+    T operator[](int pos) {
+        return findmin(pos, pos+1);
+    }
+};
+
 /*封印
 template<std::uint_fast64_t p=100000>
 class MultiInt{
