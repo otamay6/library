@@ -4,6 +4,9 @@
 #include<utility>
 #include<functional>
 #include<random>
+
+/// @brief セグ木
+/// @tparam T モノイド
 template<typename T> class SegmentTree{
   private:
     typedef std::function<T(T,T)> F;
@@ -13,6 +16,10 @@ template<typename T> class SegmentTree{
     F f;
     F g;
   public:
+    /// @brief セグ木作成
+    /// @param f queryの適用関数
+    /// @param g updateの適用関数
+    /// @param d 零元
     SegmentTree(F f,F g,T d):d0(d),f(f),g(g){}
     void init(int _n){
         n=1;
@@ -35,6 +42,10 @@ template<typename T> class SegmentTree{
         }
         return;
     }
+    /// @brief [l,r]のqueryを求める
+    /// @param l 
+    /// @param r 
+    /// @return 
     T query(int l,int r){
         T vl=d0,vr=d0;
         l+=n-1;
@@ -46,6 +57,7 @@ template<typename T> class SegmentTree{
         return f(vl,vr);
     }
 };
+
 
 template<typename T>
 class dynamic_segtree{
