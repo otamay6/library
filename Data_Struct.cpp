@@ -862,6 +862,110 @@ public:
     }
 };
 
+
+/// @brief 直線集合に対して、あるxの最小値をO((N+Q)(logN)^2)で求める
+/// @tparam T 直線と戻り値の型
+template<typename T>
+class ConvexHullTrick {
+private:
+    /// @brief f(x) = ax + b 
+    struct Linear {
+        T a;
+        T b;
+        bool is_query;
+        mutable std::function<const Linear *(void)> getSuc;
+        bool operator<(const Linear &rhs)const{
+            // lower_boundで二分探索するロジック
+            if (is_query) {
+				const Linear* suc = getSuc();
+				if (suc == nullptr) return true;
+				return (suc->a - rhs.a) * a + suc->b - rhs.b > 0;
+			}
+			if (rhs.is_query) {
+				const Linear* suc = getSuc();
+				if (suc == nullptr) return false;
+				return (suc->a - a) * rhs.a + suc->b - b < 0;
+			}
+            // ソートのための順序
+            return this->a < rhs.a;
+        }
+        /// @brief あるxにおける直線のy座標
+        /// @param x x座標
+        /// @return y座標
+        T f(const T &x)const{
+            return this->a * x + b;
+        }
+        Linear(const T &a, const T &b, const bool &is_query = false):
+        a(a), 
+        b(b),
+        is_query(is_query)
+        {}
+    };
+    std::set<Linear> lines;
+
+    /// @brief イテレータが示す線が不要か判定する
+    /// @param iter 対象iterator
+    /// @return 不要かどうか
+    bool is_bad(const typename std::set<Linear>::iterator iter) {
+        // 前後に直線が二つなければ必要な線
+        auto nex = std::next(iter);
+        if(iter == lines.begin() || nex == lines.end()) return false;
+        auto pre = std::prev(iter);
+        // 前後の直線の交点の下を通るか判定する
+		return (iter->b - pre->b) * (nex->a - iter->a) >= (nex->b - iter->b) * (iter->a - pre->a);
+    }
+public:
+    ConvexHullTrick() {}
+    /// @brief y=ax+bである直線を追加する
+    /// @param a 傾き
+    /// @param b y切片
+    void add_line(const T &a, const T &b){
+        auto result = lines.insert(Linear(a, b));
+        if(!result.second) {
+            // 同じ直線がある場合追加しない
+            return;
+        }
+        auto iter = result.first;
+        iter->getSuc = [=] {return next(iter) == lines.end() ? nullptr : &*next(iter); };
+        if(is_bad(iter)) {
+            // 追加不要なら削除
+            lines.erase(iter);
+            return;
+        }
+        auto nex = std::next(iter);
+        while(nex != lines.end() && is_bad(nex)){
+            // 傾きが大きいものが不要なら削除する
+            iter = std::prev(lines.erase(nex));
+            nex = std::next(iter);
+        }
+        while(iter != lines.begin() && is_bad(std::prev(iter))){
+            // 傾きが小さいものが不要なら削除する
+            iter = lines.erase(std::prev(iter));
+            
+        }
+    }
+
+    /// @brief あるxにおける直線群の最小値を求める
+    /// @param x x座標
+    /// @return y座標の最小値
+    T min(const T &x) {
+        // (単調減少区間) | (単調増加区間)
+        // この区切りを二分探索で調べると、そこが最小値になる
+        auto res = lines.lower_bound(Linear(x, 0, true));
+
+        return res->f(x);
+    }
+
+    void print(T x){
+        cerr << "cht data print start" << endl;
+        cerr << x << endl;
+        for(auto &line: lines){
+            cerr << line.a << " " << line.b << " " << line.f(x) << endl;
+        }
+        cerr << "cht data print end" << endl;
+    }
+};
+
 /*封印
 template<std::uint_fast64_t p=100000>
 class MultiInt{
