@@ -376,6 +376,10 @@ class HLD{
         }
         return newid[u]<newid[v]?u:v;
     }
+    /// @brief u,v間のパスにおける連続したノードid頂点組クエリ
+    /// @param u パス端点にある頂点u
+    /// @param v パスの端点にある頂点v
+    /// @return パス(u,v)上にある頂点が全て含まれる、区間[l,r]の集合
     std::vector<std::pair<int,int>> vquery(int u,int v)const{
         std::vector<std::pair<int,int>> res;
         int rt=lca(u,v);
@@ -390,6 +394,10 @@ class HLD{
         res.emplace_back(newid[rt],std::max(newid[u],newid[v]));
         return res;
     }
+    /// @brief u,v間のパスにおける連続した辺id頂点組クエリ
+    /// @param u パス端点にある頂点u
+    /// @param v パスの端点にある頂点v
+    /// @return パス(u,v)上にある辺のidが全て含まれる、区間[l,r]の集合
     std::vector<std::pair<int,int>> equery(int u,int v)const{
         //頂点idから親に向かう辺の番号をid-1とする
         std::vector<std::pair<int,int>> res;
@@ -406,6 +414,9 @@ class HLD{
         if(newid[rt]!=R) res.emplace_back(newid[rt],R-1);
         return res;
     }
+    /// @brief 頂点uの部分木情報
+    /// @param u 頂点
+    /// @return 頂点uを根とする部分木の区間[l, r]
     std::pair<int,int> tquery(int u){
         if(leaf[u]!=-1) return std::make_pair(newid[u],leaf[u]);
         leaf[u]=newid[u];
@@ -416,9 +427,13 @@ class HLD{
         }
         return std::make_pair(newid[u],leaf[u]);
     }
+    /// @brief  頂点uのid、頂点uから根に向かう辺はid-1
     int id(int u)const{return newid[u];}
+    // idが示す頂点の元の番号
     int restore(int ID)const{return Restore[ID];}
+    /// @brief 頂点uの深さ
     int depth(int u)const{return Depth[u];}
+    // 頂点uの親
     int parent(int u)const{return par[u];}
 };
 
