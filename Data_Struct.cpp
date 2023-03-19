@@ -377,6 +377,7 @@ class HLD{
         return newid[u]<newid[v]?u:v;
     }
     /// @brief u,v間のパスにおける連続したノードid頂点組クエリ
+    /// 計算量 : O(logV)
     /// @param u パス端点にある頂点u
     /// @param v パスの端点にある頂点v
     /// @return パス(u,v)上にある頂点が全て含まれる、区間[l,r]の集合
@@ -394,7 +395,8 @@ class HLD{
         res.emplace_back(newid[rt],std::max(newid[u],newid[v]));
         return res;
     }
-    /// @brief u,v間のパスにおける連続した辺id頂点組クエリ
+    /// @brief u,v間のパスにおける連続した辺id頂点組クエリ]
+    /// 計算量O(logV)
     /// @param u パス端点にある頂点u
     /// @param v パスの端点にある頂点v
     /// @return パス(u,v)上にある辺のidが全て含まれる、区間[l,r]の集合
@@ -415,6 +417,7 @@ class HLD{
         return res;
     }
     /// @brief 頂点uの部分木情報
+    /// 計算量償却O(1)
     /// @param u 頂点
     /// @return 頂点uを根とする部分木の区間[l, r]
     std::pair<int,int> tquery(int u){
