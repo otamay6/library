@@ -86,7 +86,7 @@ public:
                 N /= p[i];
                 pfactorize.back().second++;
             }
-            if (pfactorize.size() == 0)
+            if (pfactorize.back().second == 0)
                 pfactorize.pop_back();
         }
         if (N > 1)
