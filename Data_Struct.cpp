@@ -984,6 +984,274 @@ public:
     }
 };
 
+/// @brief 平方分割リスト構造
+/// @tparam T リスト構造に乗せる型
+/// 平方分割された各バケットは先頭ノードが次のバケットの先頭ノードへのポインタを持つ
+/// バケットのサイズはsqrt(N)で、小数点以下切り捨てとする
+/// 区間クエリもできる、交換則と逆元を持つこと
+template<class T>
+class SquareDivisionList{
+private:
+    using QueryFunc = std::function<T(T,T)>;
+    using RevFunc = std::function<T(T,T)>; // 逆元
+
+    static T func_init(T a, T b){return a;}
+
+    template<class U>
+    struct ListElement{
+        ListElement *nxt;
+        ListElement *prv;
+        ListElement *sq_jump;
+        T value;
+        ListElement(const T& value):
+            nxt(nullptr),
+            prv(nullptr),
+            sq_jump(nullptr),
+            value(value) {
+
+        }
+    };
+
+    size_t length;
+    ListElement<T> *front;
+    std::vector<T> query_backets; // バケット単位のquery_func適用結果
+
+    QueryFunc query_func;
+    RevFunc rev_func;
+    T id_e;
+
+    struct SearchResult{
+        ListElement<T> *backet_front;
+        ListElement<T> *searched_element;
+        size_t bakcet_index;
+    };
+
+    /// @brief ノード検索
+    /// @param idx 
+    /// @return 先頭から見てidx番目のノード
+    SearchResult search(size_t idx){
+        // std::cerr << "search:" << idx << std::endl;
+        size_t square_length = decide_backet_size(length);
+        ListElement<T> *backet_front = front;
+        size_t b_idx = 0;
+        while(idx > square_length){
+            backet_front = backet_front->sq_jump;
+            idx -= square_length;
+            b_idx++;
+        }
+        ListElement<T> *elem = backet_front;
+        while(idx-- > 0){
+            elem = elem->nxt;
+        }
+        // std::cerr << "search result:element value=" << elem->value << ":backet index=" << b_idx << std::endl; 
+        return {backet_front, elem, b_idx};
+    }
+
+    /// @brief 平方分割用リンク作成
+    /// @param  先頭からsqrt(N)個毎にリンクを貼って、バケットを初期化する
+    void make_square_division_link(void){
+        size_t sq_length = decide_backet_size(length);
+        ListElement<T> *backet_front = front;
+        ListElement<T> *element = front;
+        T b = id_e;
+        query_backets.clear();
+        // std::cerr << "pointA" << std::endl;
+        for(int i = 1; i <= length; i++){
+            // std::cerr << "pointB" << std::endl;
+            b = query_func(b, element->value);
+            // std::cerr << "pointC" << std::endl;
+            element = element->nxt;
+            if(i % sq_length == 0){
+                // sqrt(N)回遷移したところにリンクを貼る
+                backet_front->sq_jump = element;
+                backet_front = element;
+                // 対応するバケットに演算結果を入れる
+                query_backets.push_back(b);
+                b = id_e;
+            }
+        }
+        if(length % sq_length != 0){
+            // 後ろが余ったら結果をバケットに入れておく
+            query_backets.push_back(b);
+        }
+    }
+
+    size_t decide_backet_size(size_t full_length){
+        return std::sqrt(full_length) + 1;
+    }
+public:
+    explicit SquareDivisionList(
+        T id_e = T(), 
+        QueryFunc qf = func_init, 
+        RevFunc rev_func = func_init
+    ):
+        length(0),
+        front(nullptr),
+        query_backets(vector<T>()),
+        query_func(qf),
+        rev_func(rev_func)
+    {
+
+    }
+    explicit SquareDivisionList(
+        const std::vector<T> &vec, 
+        T id_e = T(), 
+        QueryFunc qf=func_init, 
+        RevFunc rev_func = func_init
+    ):
+        length(0),
+        front(nullptr),
+        query_backets(vector<T>()),
+        query_func(qf),
+        rev_func(rev_func)
+    {
+        front = new T(vec[0]);
+        ListElement<T> *prv = front;
+        for(int i = 1; i < vec.size(); i++){
+            ListElement<T> *element = new ListElement<T>(vec[i]);
+            // [i-1, i]を双方向に連結
+            prv->nxt = element;
+            element->prv = prv;
+            prv = element;
+        }
+        // [0, n-1]を双方向に連結
+        front->prv = prv;
+        prv->nxt = front;
+        make_square_division_link();
+    }
+
+    ~SquareDivisionList(){
+        ListElement<T> *e;
+        for(size_t i = 0; i < length; i++){
+            e = front->nxt;
+            delete front;
+            front = e;
+        }
+    }
+
+    void insert(size_t idx, const T& value){
+        // 指定位置に挿入
+        // std::cerr << "insert:" << idx << " " << value << std::endl;
+        ListElement<T> *element = new ListElement<T>(value);
+        if(!front){
+            front = element;
+            front->nxt = front;
+            front->prv = front;
+        }
+        else{
+            SearchResult result = search(idx);
+            ListElement<T> *nxt = result.searched_element;
+            ListElement<T> *prv = nxt->prv;
+            element->nxt = nxt; // p e -> n
+            prv->nxt = element; // p -> e -> n
+            nxt->prv = element; // p -> e <-> n
+            element->prv = prv; // p<-> e <-> n
+            // 先頭に挿入したときは特殊
+            if(idx == 0){
+                front = element;
+            }
+        }
+        // 平方分割リンクを更新して、バケットの値を再計算する
+        size_t sq_length = decide_backet_size(length);
+        size_t sq_length_new = decide_backet_size(++length);
+        // std::cerr << sq_length << " " << sq_length_new << std::endl;
+        if(sq_length != sq_length_new){
+            // 分割サイズが変わったら再構築
+            make_square_division_link();
+        }
+        else{
+            // 先頭からバケットごとに走査していく
+            // バケットが挿入されたところから後ろは1つずれていく
+            size_t now_idx = 0;
+            size_t backet_index = 0;
+            ListElement<T> *backet_front = front;
+            while(now_idx + sq_length < length - 1){
+                if(now_idx + sq_length == idx){
+                    // 次のバケットの先頭に要素が挿入された場合
+                    backet_front->sq_jump = backet_front->sq_jump->prv;
+                }
+                else if(now_idx < idx && idx < now_idx + sq_length){
+                    // バケット内の先頭以外に挿入された要素がある場合
+                    // 正しいバケットの先頭にリンクする
+                    backet_front->sq_jump = backet_front->sq_jump->prv;
+                    // バケットの末尾が出ていく
+                    query_backets[backet_index] = rev_func(query_backets[backet_index], backet_front->sq_jump->value);
+                    query_backets[backet_index] = query_func(query_backets[backet_index], value);
+                }
+                else if(idx <= now_idx){
+                    // バケット先頭以前に要素が挿入済みの場合
+                    // 挿入前のバケット先頭は後ろにずれている
+                    ListElement<T> *prev_bf = backet_front->nxt;
+                    backet_front->sq_jump = prev_bf->sq_jump->prv;
+                    // バケットの末尾が出ていく
+                    query_backets[backet_index] = rev_func(query_backets[backet_index], backet_front->sq_jump->value);
+                    // 今のバケット先頭が新たに入ってきた要素である
+                    query_backets[backet_index] = query_func(query_backets[backet_index], backet_front->value);
+                }
+                now_idx += sq_length;
+                backet_index++;
+                backet_front = backet_front->sq_jump;
+            }
+            // 最も後ろのバケットは次のバケットへのリンクがない
+            if(length % sq_length == 1){
+                // 新しいバケットを追加
+                ListElement<T> *back = front->prv;
+                backet_front->sq_jump = back;
+                query_backets.push_back(back->value);
+                // 出ていく要素の分を計算する(末尾挿入のときは後で余分に加算する)
+                query_backets[backet_index] = rev_func(query_backets[backet_index], back->value);
+            }
+            if(now_idx <= idx && idx <= now_idx + sq_length){
+                // バケット先頭以降に要素が挿入されているとき
+                // バケット内には挿入された要素が入る(末尾挿入でバケット追加されたときは出ていく要素としてキャンセルされる)
+                query_backets[backet_index] = rev_func(query_backets[backet_index], value);
+            }
+            else{
+                // バケット先頭より前に要素が挿入されているとき
+                // 先頭自身がバケットに入ってきた要素である
+                query_backets[backet_index] = rev_func(query_backets[backet_index], backet_front->value);
+            }
+        }
+    }
+
+    void change(size_t idx, const T& value){
+        SearchResult result = search(idx);
+        // 逆元を適用して再計算
+        T& backet = query_backets[result.bakcet_index];
+        backet = rev_func(backet, result.searched_element->value);
+        backet = query_func(backet, value);
+        result.searched_element->value = value;
+    }
+
+    const T& at(size_t idx){
+        if(idx >= length){
+            throw std::out_of_range("index is out of range");
+        }
+        return search(idx).searched_element->value;
+    }
+
+    void debug_print(void){
+        std::cerr << "list elements:\r\n[";
+        ListElement<T> *e = front;
+        for(size_t i = 0; i < length; i++){
+            std::cerr << e->value << ", ";
+            e = e->nxt;
+        }
+        std::cerr << "]\r\nreverse link:\r\n[";
+        for(size_t i = 0; i < length; i++){
+            e = e->prv;
+            std::cerr << e->value << ", ";
+        }
+        std::cerr << "]\r\nsquare_link:\r\n[";
+        while(e){
+            std::cerr << e->value << ", ";
+            e = e->sq_jump;
+        }
+        std::cerr << "]" << std::endl; 
+    }
+};
+
+
 /*封印
 template<std::uint_fast64_t p=100000>
 class MultiInt{
