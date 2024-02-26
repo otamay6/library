@@ -988,7 +988,7 @@ public:
 /// @tparam T リスト構造に乗せる型
 /// 平方分割された各バケットは先頭ノードが次のバケットの先頭ノードへのポインタを持つ
 /// バケットのサイズはsqrt(N)で、小数点以下切り捨てとする
-/// 区間クエリもできる、交換則と逆元を持つこと
+/// 区間クエリ[l,r)もできる、交換則と逆元を持つこと
 template<class T>
 class SquareDivisionList{
 private:
@@ -1108,18 +1108,21 @@ public:
         id_e(id_e)
     {
         sq_length = decide_backet_size(length);
-        front = new T(vec[0]);
+        front = new ListElement<T>(vec[0]);
         ListElement<T> *prv = front;
         for(int i = 1; i < vec.size(); i++){
             ListElement<T> *element = new ListElement<T>(vec[i]);
+            //std::cerr << element->value << ", ";
             // [i-1, i]を双方向に連結
             prv->nxt = element;
             element->prv = prv;
             prv = element;
         }
+        //std::cerr << endl;
         // [0, n-1]を双方向に連結
         front->prv = prv;
         prv->nxt = front;
+        //std::cerr << front->nxt->value << std::endl;
         make_square_division_link();
     }
 
@@ -1362,7 +1365,11 @@ public:
             std::cerr << e->value << ", ";
             e = e->sq_jump;
         }
-        std::cerr << "]" << std::endl; 
+        std::cerr << "]\r\nquery_backets:\r\n[";
+        for(auto q: query_backets){
+            std::cerr << q << ", ";
+        }
+        std::cerr << "]" << std::endl;
     }
 };
 
