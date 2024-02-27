@@ -1024,7 +1024,7 @@ private:
     struct SearchResult{
         ListElement<T> *backet_front;
         ListElement<T> *searched_element;
-        size_t bakcet_index;
+        size_t backet_index;
     };
 
     /// @brief ノード検索
@@ -1087,7 +1087,7 @@ public:
         length(0),
         sq_length(0),
         front(nullptr),
-        query_backets(vector<T>()),
+        query_backets(std::vector<T>()),
         query_func(qf),
         rev_func(rev_func),
         id_e(id_e)
@@ -1102,7 +1102,7 @@ public:
     ):
         length(vec.size()),
         front(nullptr),
-        query_backets(vector<T>()),
+        query_backets(std::vector<T>()),
         query_func(qf),
         rev_func(rev_func),
         id_e(id_e)
@@ -1301,7 +1301,7 @@ public:
         T q = id_e;
         // std::cerr << ret_r.backet_front->value << std::endl;
         // [l, r)の範囲を含む全てのバケットを加算
-        for(size_t idx = ret_l.bakcet_index; idx <= ret_r.bakcet_index; idx++){
+        for(size_t idx = ret_l.backet_index; idx <= ret_r.backet_index; idx++){
             // std::cerr << "backet value=" << query_backets[idx] << std::endl;
             q = query_func(q, query_backets[idx]);
         }
@@ -1316,7 +1316,7 @@ public:
         // [r, backet_front)を減算
         element = ret_r.searched_element->nxt;
         ListElement<T> *end = ret_r.backet_front->sq_jump;
-        if(ret_r.bakcet_index + 1 == query_backets.size()){
+        if(ret_r.backet_index + 1 == query_backets.size()){
             // 末尾バケットの場合、リストの先頭が終端
             end = front;
         }
@@ -1332,7 +1332,7 @@ public:
     void change(size_t idx, const T& value){
         SearchResult result = search(idx);
         // 逆元を適用して再計算
-        T& backet = query_backets[result.bakcet_index];
+        T& backet = query_backets[result.backet_index];
         backet = rev_func(backet, result.searched_element->value);
         backet = query_func(backet, value);
         result.searched_element->value = value;
