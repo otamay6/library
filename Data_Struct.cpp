@@ -1297,34 +1297,94 @@ public:
     T query(size_t l, size_t r){
         // std::cerr << l << " " << r << std::endl;
         SearchResult ret_l = search(l);
-        SearchResult ret_r = search(r-1);
         T q = id_e;
-        // std::cerr << ret_r.backet_front->value << std::endl;
-        // [l, r)の範囲を含む全てのバケットを加算
-        for(size_t idx = ret_l.backet_index; idx <= ret_r.backet_index; idx++){
-            // std::cerr << "backet value=" << query_backets[idx] << std::endl;
-            q = query_func(q, query_backets[idx]);
+        ListElement<T> *element = ret_l.searched_element;
+        //printf("pointA\n");
+        if(r - l <= sq_length /2){
+        	// full calc
+        	while(l++ < r){
+        		q = query_func(q, element->value);
+        		element = element->nxt;
+        	}
+        	return q;
         }
-        // std::cerr << "full backet sum=" << q << std::endl;
-        // [bakcet_front, l)を減算
-        ListElement<T> *element = ret_l.backet_front;
-        while(element != ret_l.searched_element){
-            q = rev_func(q, element->value);
-            element = element->nxt;
+        else if(l % sq_length <= sq_length / 2){
+        	//printf("pointD\n");
+        	// [bf, bf_nxt) - [bf, l)
+        	q = query_func(q, query_backets[ret_l.backet_index]);
+        	while(element != ret_l.backet_front){
+        		element = element->prv;
+        		l--;
+        		q = rev_func(q, element->value);
+        	}
+        	//printf("pointF\n");
+        	if(element->sq_jump){
+        		element = element->sq_jump;
+        		l += sq_length;
+        	}
+        	else{
+        		element = front;
+        		l = length;
+        	}
+        	// - [r, bf_next)
+        	//std::cerr << r << " " << l << " " << length<<std::endl;
+        	while(r < l){
+        		element =element->prv;
+        		l--;
+        		q = rev_func(q, element->value);
+        	}
+        	//printf("pointG\n");
+        	if(r==l){
+        		return q;
+        	}
         }
-        // std::cerr << "left out=" << q << std::endl;
-        // [r, backet_front)を減算
-        element = ret_r.searched_element->nxt;
-        ListElement<T> *end = ret_r.backet_front->sq_jump;
-        if(ret_r.backet_index + 1 == query_backets.size()){
-            // 末尾バケットの場合、リストの先頭が終端
-            end = front;
+        else if(r > (ret_l.backet_index+1)*sq_length){
+        	//printf("pointE\n");
+        	// [l, bf_nxt)
+        	while(element != ret_l.backet_front->sq_jump){
+        		q = query_func(q, element->value);
+        		element = element->nxt;
+        		l++;
+        	}
         }
-        // std::cerr << "end_value=" << end->value << std::endl;
-        while(element != end){
-            q = rev_func(q, element->value);
-            element = element->nxt;
-            // std::cerr << "right value=" << element->value << std::endl;
+        else{
+        	// [l, r)
+        	while(l++ < r){
+        		q = query_func(q, element->value);
+        		element = element->nxt;
+        	}
+        	return q;
+        }
+        //printf("pountB\n");
+        // [bf_nxt, bf_last)
+        while(r - l >= sq_length){
+        	q = query_func(q, query_backets[++ret_l.backet_index]);
+        	element = element->sq_jump;
+        	l += sq_length;
+        }
+        //printf("poibtC\n");
+        if(r - l < sq_length / 2){
+        	//[bf_last, r)
+        	while(l++ < r){
+        		q = query_func(q, element->value);
+        		element = element->nxt;
+        	}
+        }
+        else{
+        	// [bf_last, bf_last_nxt) - [r, bf_last_nxt)
+        	q = query_func(q, query_backets[++ret_l.backet_index]);
+        	if(element->sq_jump){
+        		element = element->sq_jump;
+        		l += sq_length;
+        	}
+        	else{
+        		element = front;
+        		l = length;
+        	}
+        	while(r < l--){
+        		element = element->prv;
+        		q = rev_func(q, element->value);
+        	}
         }
         return q;
     }
