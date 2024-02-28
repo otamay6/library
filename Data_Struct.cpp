@@ -1024,7 +1024,7 @@ private:
     struct SearchResult{
         ListElement<T> *backet_front;
         ListElement<T> *searched_element;
-        size_t bakcet_index;
+        size_t backet_index;
     };
 
     /// @brief ノード検索
@@ -1087,7 +1087,7 @@ public:
         length(0),
         sq_length(0),
         front(nullptr),
-        query_backets(vector<T>()),
+        query_backets(std::vector<T>()),
         query_func(qf),
         rev_func(rev_func),
         id_e(id_e)
@@ -1102,7 +1102,7 @@ public:
     ):
         length(vec.size()),
         front(nullptr),
-        query_backets(vector<T>()),
+        query_backets(std::vector<T>()),
         query_func(qf),
         rev_func(rev_func),
         id_e(id_e)
@@ -1300,34 +1300,94 @@ public:
     T query(size_t l, size_t r){
         // std::cerr << l << " " << r << std::endl;
         SearchResult ret_l = search(l);
-        SearchResult ret_r = search(r-1);
         T q = id_e;
-        // std::cerr << ret_r.backet_front->value << std::endl;
-        // [l, r)の範囲を含む全てのバケットを加算
-        for(size_t idx = ret_l.bakcet_index; idx <= ret_r.bakcet_index; idx++){
-            // std::cerr << "backet value=" << query_backets[idx] << std::endl;
-            q = query_func(q, query_backets[idx]);
+        ListElement<T> *element = ret_l.searched_element;
+        //printf("pointA\n");
+        if(r - l <= sq_length /2){
+        	// full calc
+        	while(l++ < r){
+        		q = query_func(q, element->value);
+        		element = element->nxt;
+        	}
+        	return q;
         }
-        // std::cerr << "full backet sum=" << q << std::endl;
-        // [bakcet_front, l)を減算
-        ListElement<T> *element = ret_l.backet_front;
-        while(element != ret_l.searched_element){
-            q = rev_func(q, element->value);
-            element = element->nxt;
+        else if(l % sq_length <= sq_length / 2){
+        	//printf("pointD\n");
+        	// [bf, bf_nxt) - [bf, l)
+        	q = query_func(q, query_backets[ret_l.backet_index]);
+        	while(element != ret_l.backet_front){
+        		element = element->prv;
+        		l--;
+        		q = rev_func(q, element->value);
+        	}
+        	//printf("pointF\n");
+        	if(element->sq_jump){
+        		element = element->sq_jump;
+        		l += sq_length;
+        	}
+        	else{
+        		element = front;
+        		l = length;
+        	}
+        	// - [r, bf_next)
+        	//std::cerr << r << " " << l << " " << length<<std::endl;
+        	while(r < l){
+        		element =element->prv;
+        		l--;
+        		q = rev_func(q, element->value);
+        	}
+        	//printf("pointG\n");
+        	if(r==l){
+        		return q;
+        	}
         }
-        // std::cerr << "left out=" << q << std::endl;
-        // [r, backet_front)を減算
-        element = ret_r.searched_element->nxt;
-        ListElement<T> *end = ret_r.backet_front->sq_jump;
-        if(ret_r.bakcet_index + 1 == query_backets.size()){
-            // 末尾バケットの場合、リストの先頭が終端
-            end = front;
+        else if(r > (ret_l.backet_index+1)*sq_length){
+        	//printf("pointE\n");
+        	// [l, bf_nxt)
+        	while(element != ret_l.backet_front->sq_jump){
+        		q = query_func(q, element->value);
+        		element = element->nxt;
+        		l++;
+        	}
         }
-        // std::cerr << "end_value=" << end->value << std::endl;
-        while(element != end){
-            q = rev_func(q, element->value);
-            element = element->nxt;
-            // std::cerr << "right value=" << element->value << std::endl;
+        else{
+        	// [l, r)
+        	while(l++ < r){
+        		q = query_func(q, element->value);
+        		element = element->nxt;
+        	}
+        	return q;
+        }
+        //printf("pountB\n");
+        // [bf_nxt, bf_last)
+        while(r - l >= sq_length){
+        	q = query_func(q, query_backets[++ret_l.backet_index]);
+        	element = element->sq_jump;
+        	l += sq_length;
+        }
+        //printf("poibtC\n");
+        if(r - l < sq_length / 2){
+        	//[bf_last, r)
+        	while(l++ < r){
+        		q = query_func(q, element->value);
+        		element = element->nxt;
+        	}
+        }
+        else{
+        	// [bf_last, bf_last_nxt) - [r, bf_last_nxt)
+        	q = query_func(q, query_backets[++ret_l.backet_index]);
+        	if(element->sq_jump){
+        		element = element->sq_jump;
+        		l += sq_length;
+        	}
+        	else{
+        		element = front;
+        		l = length;
+        	}
+        	while(r < l--){
+        		element = element->prv;
+        		q = rev_func(q, element->value);
+        	}
         }
         return q;
     }
@@ -1335,7 +1395,7 @@ public:
     void change(size_t idx, const T& value){
         SearchResult result = search(idx);
         // 逆元を適用して再計算
-        T& backet = query_backets[result.bakcet_index];
+        T& backet = query_backets[result.backet_index];
         backet = rev_func(backet, result.searched_element->value);
         backet = query_func(backet, value);
         result.searched_element->value = value;
@@ -1373,7 +1433,335 @@ public:
     }
 };
 
+template<class T>
+class BlockLinkedList{
+private:
+	using QueryFunc = std::function<T(T,T)>;
+	template<class U>
+	struct BlockElement{
+		BlockElement *nxt;
+		U value;
+		BlockElement(const T& value):
+			nxt(nullptr),
+			value(value)
+		{
+			
+		}
+	};
+	
+	template<class U>
+	struct BlockNode{
+		BlockElement<U> *front;
+		BlockNode *nxt_node;
+		size_t size;
+		U acc_value;
+		BlockNode(void):
+			front(nullptr),
+			nxt_node(nullptr),
+			size(0)
+		{
+			
+		}
+	};
+	
+	size_t length;
+	BlockNode<T> *front_node;
+	
+	QueryFunc query_func;
+	
+	BlockNode<T> *connect(BlockNode<T> *node){
+		if(!node->nxt_node || node->size + node->nxt_node->size > std::sqrt(length)){
+			return node;
+		}
+		BlockNode<T> *nxt_node = node->nxt_node;
+		node->nxt_node = nxt_node->nxt_node;
+		node->size += nxt_node->size;
+		node->acc_value = query_func(node->acc_value, nxt_node->acc_value);
+		BlockElement<T> *element = node->front;
+		while(element->nxt){
+			element = element->nxt;
+		}
+		element->nxt = nxt_node->front;
+		delete nxt_node;
+		return node;
+	}
+	
+	void calc_node_acc(BlockNode<T> *node){
+		BlockElement<T> *element = node->front;
+		node->acc_value = element->value;
+		while(element->nxt){
+			element = element->nxt;
+			node->acc_value = query_func(node->acc_value, element->value);
+		}
+	}
+	
+	BlockNode<T> *cut(BlockNode<T> *node){
+		// std::cerr << "cut start" << std::endl;
+		size_t sq_length = std::sqrt(length);
+		if(node->size < 2*sq_length){
+			return node;
+		}
+		BlockElement<T> *element = node->front;
+		node-> acc_value = element->value;
+		for(int i = 1; i < sq_length; i++){
+			element = element->nxt;
+			node->acc_value = query_func(node->acc_value, element->value);
+		}
+		BlockNode<T> *nxt_node = new BlockNode<T>();
+		nxt_node->nxt_node = node->nxt_node;
+		node->nxt_node = nxt_node;
+		nxt_node->size = node->size - sq_length;
+		node->size = sq_length;
+		nxt_node->front = element->nxt;
+		element->nxt = nullptr;
+		// calc new node accumulate
+		calc_node_acc(nxt_node);
+		return node;
+	}
+	
+	struct SearchResult{
+		BlockNode<T> *node;
+		BlockElement<T> *element;
+		size_t elem_index;
+	};
+	SearchResult search(size_t idx){
+		BlockNode<T> *node = front_node;
+		if(idx >= length){
+			return {nullptr, nullptr, 0};
+		}
+		while(node){
+			node = connect(node);
+			// std::cerr << "search:node size=" << node->size << std::endl;
+			if(idx >= node->size){
+				idx -= node->size;
+				node = node->nxt_node;
+			}
+			else {
+				break;
+			}
+		}
 
+		BlockElement<T> *element = nullptr;
+		if(node){
+			element = node->front;
+			for(size_t i = 0; i < idx; i++){
+				element = element->nxt;
+			}
+		}
+		return {node, element, idx};
+	}
+	
+public:
+	explicit BlockLinkedList(QueryFunc q=[](T a,T b){return a+b;}):
+		length(0),
+		front_node(new BlockNode<T>()),
+		query_func(q)
+	{
+		
+	}
+	explicit BlockLinkedList(const std::vector<T> &vec, QueryFunc q = [](T a, T b){return a+b;}):
+		length(vec.size()),
+		front_node(new BlockNode<T>()),
+		query_func(q)
+	{
+		if(length == 0){
+			return;
+		}
+		size_t sq_length = std::sqrt(length);
+		BlockNode<T> *node = front_node;
+		BlockElement<T> *element = nullptr;
+		for(auto v : vec){
+			if(node->size >= sq_length){
+				node->nxt_node = new BlockNode<T>();
+				node = node->nxt_node;
+			}
+			if(!node->size){
+				element = new BlockElement<T>(v);
+				node->front = element;
+				node->acc_value = v;
+			}
+			else {
+				element->nxt = new BlockElement<T>(v);
+				element = element->nxt;
+				node->acc_value = query_func(node->acc_value, v);
+			}
+			node->size++;
+		}
+	}
+	~BlockLinkedList(){
+		BlockNode<T> *node = front_node;
+		while(node){
+			BlockNode<T> *prv_node = node;
+			BlockElement<T> *element = node->front;
+			while(element){
+				BlockElement<T> *prv_elem = element;
+				element = element->nxt;
+				delete prv_elem;
+			}
+			node = node->nxt_node;
+			delete prv_node;
+		}
+	}
+	
+	void insert(size_t idx, const T& value){
+		// std::cerr << "insert start" << std::endl;
+		BlockNode<T> *node;
+		if(length == 0){
+			// std::cerr << "first insert point" << std::endl;
+			front_node->front = new BlockElement<T>(value);
+			front_node->acc_value = value;
+			node = front_node;
+			// std::cerr << "first insert end" <<std::endl;
+		}
+		else if(idx == 0){
+			node = front_node;
+			BlockElement<T> *element = node->front;
+			node->front = new BlockElement<T>(value);
+			node->front->nxt = element;
+			calc_node_acc(node);
+		}
+		else{
+			SearchResult result = search(idx-1);
+			node = result.node;
+			if(!result.element->nxt){
+				result.element->nxt = new BlockElement<T>(value);
+				node->acc_value = query_func(node->acc_value, value);
+			}
+			else {
+				BlockElement<T> *element = new BlockElement<T>(value);
+				element->nxt = result.element->nxt;;
+				result.element->nxt = element;
+				calc_node_acc(node);
+			}
+		}
+		node->size++;
+		length++;
+		cut(node);
+		// std::cerr<<"insert end" << std::endl;
+	}
+	
+	void erase(size_t idx){
+		BlockNode<T> *node;
+		BlockElement<T> *element;
+		assert(idx < length);
+		if(idx==0){
+			node = front_node;
+			element = node->front;
+			if(node->size == 1){
+				front_node = node->nxt_node;
+				delete node;
+			}
+			else{
+				node->front = element->nxt;
+				node->size--;
+				calc_node_acc(node);
+			}
+		}
+		else{
+			SearchResult result = search(idx - 1);
+			element = result.element->nxt;
+			node = result.node;
+			if(!element){
+				BlockNode<T> *nxt_node = node->nxt_node;
+				if(nxt_node->size <= 1){
+					element = nxt_node->front;
+					node->nxt_node = nxt_node->nxt_node;
+					delete nxt_node;
+				}
+				else{
+					node = node->nxt_node;
+					element = node->front;
+					node->front = element->nxt;
+					node->size--;
+					calc_node_acc(node);
+				}
+			}
+			else{
+				// node size is absolutely >= 2
+				result.element->nxt = element->nxt;
+				node->size--;
+				calc_node_acc(node);
+			}
+		}
+		delete element;
+		length--;
+	}
+	
+	T query(size_t l, size_t r){
+		SearchResult result = search(l);
+		BlockNode<T> *node = result.node;
+		BlockElement<T> *element = result.element;
+		T res;
+		// std::cerr << "query input=" << l << " " << r <<std::endl;
+		// std::cerr << "first element index=" << result.elem_index<< std::endl;
+		if(result.elem_index > 0 || r - l < node->size){
+			res = element->value;
+			l++;
+			while(l < r && element->nxt){
+				element = element->nxt;
+				l++;
+				res = query_func(res, element->value);
+			}
+		}
+		else{
+			res = node->acc_value;
+			l += node->size;
+		}
+		node = node->nxt_node;
+		// std::cerr << "first res:l:r:" << res << " " << l << " " << r << std::endl;
+		while(node && r - l >= node->size){
+			res = query_func(res,node->acc_value);
+			l += node->size;
+			node = node->nxt_node;
+		}
+		// std::cerr << "backet res:l:r:" << res << " " << l << " " << r << std::endl;
+		if(node){
+			BlockElement<T> *element = node->front;
+			while(l++ < r){
+				//std::cerr << element->value <<std::endl;
+				res = query_func(res, element->value);
+				element = element->nxt;
+			}
+		}
+		// std::cerr << "last res:l:r:" << res << " " << l << " " << r << std::endl;
+		return res;
+	}
+	
+	void change(size_t idx, const T& value){
+		SearchResult result = search(idx);
+		result.element-> value = value;
+		calc_node_acc(result.node);
+	}
+	
+	const T& operator[](size_t idx){
+		return search(idx).element->value;
+	}
+	
+	void debug_print(){
+		BlockNode<T> *node = front_node;
+		bool ass = false;
+		std::cerr << "----------node info----------" << std::endl;
+		while(node){
+			std::cerr << "node size = " << node->size << std::endl;
+			if(node->size == 0){
+				ass = true;
+			}
+			std::cerr << "node acc = " << node->acc_value << std::endl;
+			std::cout << "node lists:\r\n[";
+			BlockElement<T> *element = node->front;
+			while(element){
+				std::cerr << element->value << ", ";
+				element = element->nxt;
+			}
+			std::cerr << "]" << std::endl;
+			node = node->nxt_node;
+		}
+		std::cerr << "----------info end----------" << std::endl;
+		if(ass){
+			exit(0);
+		}
+	}
+};
 /*封印
 template<std::uint_fast64_t p=100000>
 class MultiInt{
