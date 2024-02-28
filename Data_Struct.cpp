@@ -1433,6 +1433,10 @@ public:
     }
 };
 
+/// @brief Block Linked List
+/// @tparam T 
+/// 半群を累積できるリスト構造
+/// 挿入、削除、単一更新、区間クエリがO(sqrt(N))
 template<class T>
 class BlockLinkedList{
 private:
@@ -1603,6 +1607,9 @@ public:
 		}
 	}
 	
+	/// @brief 要素idxの前にvalueを追加
+	/// @param idx 
+	/// @param value 
 	void insert(size_t idx, const T& value){
 		// std::cerr << "insert start" << std::endl;
 		BlockNode<T> *node;
@@ -1640,6 +1647,8 @@ public:
 		// std::cerr<<"insert end" << std::endl;
 	}
 	
+	/// @brief 要素idxを削除する
+	/// @param idx 
 	void erase(size_t idx){
 		BlockNode<T> *node;
 		BlockElement<T> *element;
@@ -1687,6 +1696,10 @@ public:
 		length--;
 	}
 	
+	/// @brief [l, r)の範囲の累積を返す
+	/// @param l 
+	/// @param r 
+	/// @return 
 	T query(size_t l, size_t r){
 		SearchResult result = search(l);
 		BlockNode<T> *node = result.node;
@@ -1727,12 +1740,18 @@ public:
 		return res;
 	}
 	
+	/// @brief 要素idxをvalueに更新する
+	/// @param idx 
+	/// @param value 
 	void change(size_t idx, const T& value){
 		SearchResult result = search(idx);
 		result.element-> value = value;
 		calc_node_acc(result.node);
 	}
 	
+	/// @brief 要素idxを参照する
+	/// @param idx 
+	/// @return 
 	const T& operator[](size_t idx){
 		return search(idx).element->value;
 	}
@@ -1762,6 +1781,7 @@ public:
 		}
 	}
 };
+
 /*封印
 template<std::uint_fast64_t p=100000>
 class MultiInt{
