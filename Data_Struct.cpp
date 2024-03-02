@@ -1845,6 +1845,19 @@ public:
 			}
 			node->size++;
 		}
+        if(node->size){
+            node->front[1] = element;
+            // 逆方向の累積も演算する
+            if constexpr(IsCommutative)
+                node->acc_value[1] = node->acc_value[0];
+            else{
+                node->acc_value[1] = element->value();
+                while(element->nxt[1]){
+                    element = element->nxt[1];
+                    node->acc_value[1] = Monoid::op(node->acc_value[1], element->value());
+                }
+            }
+        }
 	}
 	~BlockLinkedList(){
 		NodePtr node = front_node;
@@ -1944,6 +1957,9 @@ public:
 	/// @param r 
 	/// @return 
 	Monoid query(size_t l, size_t r){
+        if(r <= l){
+            return Monoid::id();
+        }
         ParseResult parser;
         parse(l, r, &parser);
         NodePtr node;
@@ -1968,6 +1984,9 @@ public:
 
     /// 範囲[l, r)にvalueを作用させる
     void propagate(size_t l, size_t r, const EffectMonoid& value){
+        if(r <= l){
+            return;
+        }
         ParseResult parser;
         parse(l, r, &parser);
         NodePtr node;
@@ -1994,6 +2013,9 @@ public:
 
     /// 範囲[l, r)をreverseする
     void reverse(size_t l, size_t r){
+        if(r <= l + 1){
+            return;
+        }
         ParseResult parser;
         NodePtr node;
         ElementPtr element;
