@@ -1434,107 +1434,309 @@ public:
 };
 
 /// @brief Block Linked List
-/// @tparam T 
+/// @tparam Monoid 要素のモノイド
+/// example: 区間和を求めるモノイド
+// struct RSQ{
+//     struct {
+//         int value;
+//         int length;
+//     };
+//     RSQ &operator()(void){return *this;}
+//     static constexpr RSQ id(){return RSQ({0,0});}
+//     static RSQ op(RSQ a, RSQ b){return {a.value+b.value, a.length+b.length};}
+//     bool operator!=(const RSQ &rhs){return this->value != rhs.value;}
+//     friend std::ostream &operator<<(std::ostream &out, const RSQ &tgt)
+//     {
+//         out << "(" << tgt.value << "," << tgt.length << ")";
+//         return out;
+//     }
+// };
+/// @tparam EffectMonoid 作用素のモノイド
+/// example: 区間更新を行うモノイド
+// struct RAQ{
+//     int value;
+//     RAQ &operator()(void){return *this;}
+//     static constexpr RAQ id(){return RAQ({(int)0});}
+//     static RAQ op(RAQ a, RAQ b){return {a.value + b.value};}
+//     bool operator!=(const RAQ &rhs){return this->value != rhs.value;}
+//     friend std::ostream &operator<<(std::ostream &out, const RAQ &tgt)
+//     {
+//         out << "(" << tgt.value<< ")";
+//         return out;
+//     }
+// };
+/// @tparam IsCommutative Monoidが可換かどうか
+/// Effect Func Monoid x EffectMonoid → Monoid Example : [](RSQ a, RAQ b)->RSQ{return {{a.value + a.length * b.value, a.length}};}
 /// 半群を累積できるリスト構造
 /// 挿入、削除、単一更新、区間クエリがO(sqrt(N))
-template<class T>
+template<class Monoid, class EffectMonoid, bool IsCommutative = true>
 class BlockLinkedList{
 private:
-	using QueryFunc = std::function<T(T,T)>;
+	using EffectFunc = std::function<Monoid(Monoid, EffectMonoid)>;
 	template<class U>
 	struct BlockElement{
-		BlockElement *nxt;
+		BlockElement *nxt[2];
 		U value;
-		BlockElement(const T& value):
-			nxt(nullptr),
+		BlockElement(const Monoid& value):
+			nxt{nullptr, nullptr},
 			value(value)
 		{
 			
 		}
 	};
 	
-	template<class U>
+	template<class T, class U>
 	struct BlockNode{
-		BlockElement<U> *front;
+		BlockElement<T> *front[2];
 		BlockNode *nxt_node;
 		size_t size;
-		U acc_value;
+		T acc_value[2];
+        bool rev;
+        U lazy;
 		BlockNode(void):
-			front(nullptr),
+			front{nullptr, nullptr},
 			nxt_node(nullptr),
-			size(0)
+			size(0),
+            acc_value{Monoid::id(), Monoid::id()},
+            rev(false),
+            lazy(U::id())
 		{
 			
 		}
+        bool debug_print(){
+            std::cout << "*****node start*****:" << this << std::endl;
+			std::cerr << "[size, acc, rev acc, lazy, rev ]\r\n=[";
+			std::cerr << size << "," << acc_value[rev] << ", ";
+			std::cerr << acc_value[!rev] << ", " << lazy() << ", ";
+            std::cerr << rev << "]" << std::endl; 
+            std::vector<Monoid> check;
+			std::cout << "node lists:[";
+			ElementPtr element = front[rev];
+			while(element){
+				std::cerr << element->value() << ", ";
+                check.push_back(element->value());
+				element = element->nxt[rev];
+			}
+			std::cerr << "]" << std::endl;
+            std::cout << "node rev lists:[";
+			element = front[!rev];
+            bool out = false;
+            size_t i = check.size();
+			while(element){
+				std::cerr << element->value() << ", ";
+                if(check[--i] != element->value()){
+                    std::cerr << check[i] << " " << element->value() << std::endl;
+                    out = true;
+                }
+				element = element->nxt[!rev];
+			}
+			std::cerr << "]" << std::endl;
+            std::cout << "*****node end*****" << std::endl;
+            return out;
+        }
 	};
+    using ElementPtr = BlockElement<Monoid> *;
+    using NodePtr = BlockNode<Monoid, EffectMonoid> *;
 	
 	size_t length;
-	BlockNode<T> *front_node;
+	NodePtr front_node; // size 0の特殊ノード
 	
-	QueryFunc query_func;
-	
-	BlockNode<T> *connect(BlockNode<T> *node){
-		if(!node->nxt_node || node->size + node->nxt_node->size > std::sqrt(length)){
-			return node;
-		}
-		BlockNode<T> *nxt_node = node->nxt_node;
-		node->nxt_node = nxt_node->nxt_node;
-		node->size += nxt_node->size;
-		node->acc_value = query_func(node->acc_value, nxt_node->acc_value);
-		BlockElement<T> *element = node->front;
-		while(element->nxt){
-			element = element->nxt;
-		}
-		element->nxt = nxt_node->front;
+	EffectFunc effect_func;
+
+    NodePtr make_node_from_elements(const std::vector<ElementPtr>& elements){
+        if(elements.size() == 0){
+            return nullptr;
+        }
+        NodePtr node = new BlockNode<Monoid, EffectMonoid>();
+        node->size = elements.size();
+        node->front[0] = elements.front();
+        node->front[1] = elements.back();
+        ElementPtr element = elements.front();
+        for(size_t i = 1; i < elements.size(); i++){
+            element->nxt[0] = elements[i];
+            elements[i]->nxt[1] = element;
+        }
+        calc_node_acc(node);
+        return node;
+    }
+
+    /// ノード内の要素を実際に反転することでrev変数をtoggleできる
+    NodePtr toggle_rev(NodePtr node){
+        std::vector<ElementPtr> vec;
+        ElementPtr element = node->front[0];
+        ElementPtr nxt;
+        // 要素自身と要素の先頭へのリンクの反転で、反転ができる
+        // N -f> 1 <p-n> 2 <p-n> 3 <b- N
+        // N -f> 1 <n-p> 2 <n-p> 3 <b- N : element reverse
+        // N -b> 1 <n-p> 2 <n-p> 3 <f- N : front reverse
+        while(element){
+            nxt = element->nxt[0];
+            std::swap(element->nxt[0], element->nxt[1]);
+            element = nxt;
+        }
+        std::swap(node->front[0], node->front[1]);
+        // revのtoggleにより累積値も入れ替わる
+        std::swap(node->acc_value[0], node->acc_value[1]);
+        node->rev = !node->rev;
+        return node;
+    }
+
+    NodePtr pushdown(NodePtr node){
+        if(node->lazy() != EffectMonoid::id()){
+            // 遅延を各要素に伝播する
+            ElementPtr element = node->front[0];
+            while(element){
+                element->value = effect_func(element->value, node->lazy);
+                element = element->nxt[0];
+            }
+            node->lazy = EffectMonoid::id();
+        }
+        return node;
+    }
+
+    NodePtr connect(NodePtr node, NodePtr nxt_node){
+        if(node->rev != nxt_node->rev){
+            // 向きを揃える
+            node = toggle_rev(node);
+        }
+        // 要素は予め更新する
+        node = pushdown(node);
+        nxt_node = pushdown(nxt_node);
+
+        if(node->size){
+            node->nxt_node = nxt_node->nxt_node;
+            node->size += nxt_node->size;
+            // 順方向は左から伝播
+            node->acc_value[node->rev] = Monoid::op(node->acc_value[node->rev], nxt_node->acc_value[node->rev]);
+            /// 逆方向は右から伝播
+            if constexpr (IsCommutative)
+                node->acc_value[!node->rev] = node->acc_value[node->rev];
+            else
+                node->acc_value[!node->rev] = Monoid::op(nxt_node->acc_value[!node->rev], node->acc_value[!node->rev]);
+            // 前ノードの末尾と次ノードの先頭をくっつける
+            ElementPtr element = node->front[!node->rev];
+            element->nxt[node->rev] = nxt_node->front[nxt_node->rev];
+            if(nxt_node->size){
+                // 次ノードが空でないなら前ノードの末尾張替え
+                node->front[!node->rev] = nxt_node->front[!nxt_node->rev];
+                // 次ノードの先頭張替え
+                element->nxt[node->rev]->nxt[!node->rev] = element;
+            }
+        }
+        else{
+            // 前ノードが空なら次ノードをそのまま持ってくる
+            *node = *nxt_node;
+        }
 		delete nxt_node;
 		return node;
-	}
-	
-	void calc_node_acc(BlockNode<T> *node){
-		BlockElement<T> *element = node->front;
-		node->acc_value = element->value;
-		while(element->nxt){
-			element = element->nxt;
-			node->acc_value = query_func(node->acc_value, element->value);
+    }
+
+	NodePtr connect_if_short(NodePtr node){
+		NodePtr  nxt_node = node->nxt_node;
+		if(!nxt_node|| node->size + nxt_node->size > std::sqrt(length)){
+			return node;
 		}
+        return connect(node, nxt_node);
 	}
+
+    void rev_accumulate(NodePtr node){
+        bool rev = !node->rev;
+        ElementPtr element = node->front[rev];
+        node->acc_value[rev] = element->value();
+        while(element->nxt[rev]){
+            element = element->nxt[rev];
+            node->acc_value[rev] = Monoid::op(node->acc_value[rev], element->value());
+        }
+    }
 	
-	BlockNode<T> *cut(BlockNode<T> *node){
+    /// ノードのサイズ、累積値を更新する
+	void node_refresh(NodePtr node){
+        if(!node->front[node->rev]){
+            node->size = 0;
+            node->acc_value[0] = node->acc_value[1] = Monoid::id();
+            return;
+        }
+        node = pushdown(node);
+        node->size = 1;
+		ElementPtr element = node->front[node->rev];
+		node->acc_value[node->rev] = element->value();
+		while(element->nxt[node->rev]){
+            node->size++;
+			element = element->nxt[node->rev];
+			node->acc_value[node->rev] = Monoid::op(node->acc_value[node->rev], element->value());
+		}
+        if constexpr (IsCommutative)
+            node->acc_value[!node->rev] = node->acc_value[node->rev];
+        else{
+            // 逆方向の再計算を行う
+            rev_accumulate(node);
+        }
+	}
+
+    /// elementの前で切る
+    NodePtr cut(NodePtr node, ElementPtr element){
+		NodePtr  nxt_node = new BlockNode<Monoid, EffectMonoid>();
+        // node [a -> c] To node [a -> b -> c]
+		nxt_node->nxt_node = node->nxt_node; // b -> c
+		node->nxt_node = nxt_node; // a -> b
+        if(!element){
+            return node;
+        }
+        ElementPtr prv_last = element->nxt[!node->rev];
+        // 反転は元のノードを引き継ぐ
+        nxt_node->rev = node->rev;
+        // 切断面のリンクを付け替え
+        // 後半の末尾
+        nxt_node->front[!nxt_node->rev] = node->front[!node->rev];
+        // 前半の末尾
+        node->front[!node->rev] = prv_last;
+        if(prv_last)
+    		prv_last->nxt[node->rev] = nullptr;
+        else
+            node->front[node->rev] = nullptr; // 前半が空
+        // 後半の先頭
+		nxt_node->front[node->rev] = element;
+        element->nxt[!nxt_node->rev] = nullptr;
+
+		// refresh new node info
+        node_refresh(node);
+		node_refresh(nxt_node);
+
+        return node;
+    }
+
+    NodePtr cut(NodePtr node, size_t prv_size){
+		ElementPtr element = node->front[node->rev];
+		for(int i = 0; i < prv_size; i++){
+			element = element->nxt[node->rev];
+		}
+        return cut(node, element);
+    }
+	
+    /// 長さM >= 2*sqrt(N)のノードを2つに分割する
+	NodePtr  cut_if_long(NodePtr  node){
 		// std::cerr << "cut start" << std::endl;
 		size_t sq_length = std::sqrt(length);
 		if(node->size < 2*sq_length){
 			return node;
 		}
-		BlockElement<T> *element = node->front;
-		node-> acc_value = element->value;
-		for(int i = 1; i < sq_length; i++){
-			element = element->nxt;
-			node->acc_value = query_func(node->acc_value, element->value);
-		}
-		BlockNode<T> *nxt_node = new BlockNode<T>();
-		nxt_node->nxt_node = node->nxt_node;
-		node->nxt_node = nxt_node;
-		nxt_node->size = node->size - sq_length;
-		node->size = sq_length;
-		nxt_node->front = element->nxt;
-		element->nxt = nullptr;
-		// calc new node accumulate
-		calc_node_acc(nxt_node);
-		return node;
+		return cut(node, sq_length);
 	}
 	
 	struct SearchResult{
-		BlockNode<T> *node;
-		BlockElement<T> *element;
+		NodePtr  node;
+		ElementPtr element;
 		size_t elem_index;
 	};
 	SearchResult search(size_t idx){
-		BlockNode<T> *node = front_node;
+		NodePtr  node = front_node->nxt_node;
+        // std:: cerr << "search start:idx=" << idx <<  std::endl;
 		if(idx >= length){
+            // std::cerr << "search null" << std::endl;
 			return {nullptr, nullptr, 0};
 		}
 		while(node){
-			node = connect(node);
+			node = connect_if_short(node);
 			// std::cerr << "search:node size=" << node->size << std::endl;
 			if(idx >= node->size){
 				idx -= node->size;
@@ -1545,61 +1747,113 @@ private:
 			}
 		}
 
-		BlockElement<T> *element = nullptr;
+		ElementPtr element = nullptr;
 		if(node){
-			element = node->front;
+			element = node->front[node->rev];
 			for(size_t i = 0; i < idx; i++){
-				element = element->nxt;
+				element = element->nxt[node->rev];
 			}
 		}
+        // std::cerr << "search end" << std::endl;
 		return {node, element, idx};
 	}
 	
+    struct ParseResult{
+        NodePtr front_node;
+        std::vector<ElementPtr> left_elements;
+        std::vector<NodePtr> mid_nodes;
+        NodePtr back_node;
+        std::vector<ElementPtr> right_elements;
+    };
+    /// 範囲[l, r)を左端要素、真ん中ノード、右端要素に分解する
+    void parse(size_t l, size_t r, ParseResult *result){
+		SearchResult res = search(l);
+		NodePtr node = res.node;
+		ElementPtr element = res.element;
+        result->front_node = node;
+		if(res.elem_index > 0 || r - l < node->size){
+			while(l < r && element){
+                result->left_elements.push_back(element);
+				element = element->nxt[node->rev];
+				l++;
+			}
+            if(!element)
+                node = node->nxt_node;
+		}
+		while(node && r - l >= node->size){
+			result->mid_nodes.push_back(node);
+			l += node->size;
+			node = node->nxt_node;
+		}
+
+        result->back_node = node;
+		if(node){
+			ElementPtr element = node->front[node->rev];
+			while(l++ < r){
+                result->right_elements.push_back(element);
+				element = element->nxt[node->rev];
+			}
+		}
+    }
+
 public:
-	explicit BlockLinkedList(QueryFunc q=[](T a,T b){return a+b;}):
+	explicit BlockLinkedList(EffectFunc q):
 		length(0),
-		front_node(new BlockNode<T>()),
-		query_func(q)
+		front_node(new BlockNode<Monoid, EffectMonoid>()),
+		effect_func(q)
 	{
 		
 	}
-	explicit BlockLinkedList(const std::vector<T> &vec, QueryFunc q = [](T a, T b){return a+b;}):
+	explicit BlockLinkedList(const std::vector<Monoid> &vec, EffectFunc q):
 		length(vec.size()),
-		front_node(new BlockNode<T>()),
-		query_func(q)
+		front_node(new BlockNode<Monoid, EffectMonoid>()),
+		effect_func(q)
 	{
 		if(length == 0){
 			return;
 		}
 		size_t sq_length = std::sqrt(length);
-		BlockNode<T> *node = front_node;
-		BlockElement<T> *element = nullptr;
+		NodePtr  node = new BlockNode<Monoid, EffectMonoid>();
+        front_node->nxt_node = node;
+		ElementPtr element = nullptr;
 		for(auto v : vec){
 			if(node->size >= sq_length){
-				node->nxt_node = new BlockNode<T>();
+                node->front[1] = element;
+                // 逆方向の累積も演算する
+                if constexpr(IsCommutative)
+                    node->acc_value[1] = node->acc_value[0];
+                else{
+                    node->acc_value[1] = element->value();
+                    while(element->nxt[1]){
+                        element = element->nxt[1];
+                        node->acc_value[1] = Monoid::op(node->acc_value[1], element->value());
+                    }
+                }
+				node->nxt_node = new BlockNode<Monoid, EffectMonoid>();
 				node = node->nxt_node;
 			}
 			if(!node->size){
-				element = new BlockElement<T>(v);
-				node->front = element;
-				node->acc_value = v;
+				element = new BlockElement<Monoid>(v);
+				node->front[0] = element;
+				node->acc_value[0] = v;
 			}
 			else {
-				element->nxt = new BlockElement<T>(v);
-				element = element->nxt;
-				node->acc_value = query_func(node->acc_value, v);
+				element->nxt[0] = new BlockElement<Monoid>(v);
+                element->nxt[0]->nxt[1] = element;
+				element = element->nxt[0];
+				node->acc_value[0] = Monoid::op(node->acc_value[0], v);
 			}
 			node->size++;
 		}
 	}
 	~BlockLinkedList(){
-		BlockNode<T> *node = front_node;
+		NodePtr node = front_node;
 		while(node){
-			BlockNode<T> *prv_node = node;
-			BlockElement<T> *element = node->front;
+			NodePtr  prv_node = node;
+			ElementPtr element = node->front[node->rev];
 			while(element){
-				BlockElement<T> *prv_elem = element;
-				element = element->nxt;
+				ElementPtr prv_elem = element;
+				element = element->nxt[node->rev];
 				delete prv_elem;
 			}
 			node = node->nxt_node;
@@ -1610,89 +1864,78 @@ public:
 	/// @brief 要素idxの前にvalueを追加
 	/// @param idx 
 	/// @param value 
-	void insert(size_t idx, const T& value){
+	void insert(size_t idx, const Monoid& value){
 		// std::cerr << "insert start" << std::endl;
-		BlockNode<T> *node;
+		NodePtr  node;
+        //std::cerr << "insert start" <<std::endl;
+        // debug_print();
 		if(length == 0){
 			// std::cerr << "first insert point" << std::endl;
-			front_node->front = new BlockElement<T>(value);
-			front_node->acc_value = value;
-			node = front_node;
+            node = new BlockNode<Monoid, EffectMonoid>();
+			node->front[0] = node->front[1] = new BlockElement<Monoid>(value);
+			node->acc_value[0] = node->acc_value[1] = value;
+			front_node->nxt_node = node;
 			// std::cerr << "first insert end" <<std::endl;
 		}
-		else if(idx == 0){
-			node = front_node;
-			BlockElement<T> *element = node->front;
-			node->front = new BlockElement<T>(value);
-			node->front->nxt = element;
-			calc_node_acc(node);
-		}
-		else{
-			SearchResult result = search(idx-1);
+        else if(idx == length){
+            // 最後の要素に挿入
+            SearchResult result = search(idx-1);
+            node = result.node;
+            ElementPtr element = new BlockElement<Monoid>(value);
+            result.element->nxt[node->rev] = element;
+            element->nxt[!node->rev] = result.element;
+            node->front[!node->rev] = element;
+        }
+        else{
+            // 要素を検索
+			SearchResult result = search(idx);
 			node = result.node;
-			if(!result.element->nxt){
-				result.element->nxt = new BlockElement<T>(value);
-				node->acc_value = query_func(node->acc_value, value);
-			}
-			else {
-				BlockElement<T> *element = new BlockElement<T>(value);
-				element->nxt = result.element->nxt;;
-				result.element->nxt = element;
-				calc_node_acc(node);
-			}
-		}
+            // 挿入前に伝播
+            node = pushdown(node);
+            // 切ってから末尾に挿入
+            node = cut(node, result.element);
+            // std::cerr << "insert cut" << std::endl;
+            //debug_print();
+            if(node->front[!node->rev]){
+                ElementPtr element = node->front[!node->rev];
+                element->nxt[node->rev] = new BlockElement<Monoid>(value);
+                node->front[!node->rev] = element->nxt[node->rev];
+                node->front[!node->rev]->nxt[!node->rev] = element;
+                node->acc_value[node->rev] = Monoid::op(node->acc_value[node->rev], value);
+                if constexpr(IsCommutative)
+                    node->acc_value[!node->rev] = node->acc_value[node->rev];
+                else
+                    rev_accumulate(node);
+            }
+            else{
+                // 先頭挿入のとき
+                node->front[node->rev] = node->front[!node->rev] = new BlockElement<Monoid>(value);
+                node->acc_value[node->rev] = node->acc_value[!node->rev] = value; 
+            }
+        }
 		node->size++;
 		length++;
-		cut(node);
+        cut_if_long(node);
 		// std::cerr<<"insert end" << std::endl;
 	}
 	
 	/// @brief 要素idxを削除する
 	/// @param idx 
 	void erase(size_t idx){
-		BlockNode<T> *node;
-		BlockElement<T> *element;
 		assert(idx < length);
-		if(idx==0){
-			node = front_node;
-			element = node->front;
-			if(node->size == 1){
-				front_node = node->nxt_node;
-				delete node;
-			}
-			else{
-				node->front = element->nxt;
-				node->size--;
-				calc_node_acc(node);
-			}
-		}
-		else{
-			SearchResult result = search(idx - 1);
-			element = result.element->nxt;
-			node = result.node;
-			if(!element){
-				BlockNode<T> *nxt_node = node->nxt_node;
-				if(nxt_node->size <= 1){
-					element = nxt_node->front;
-					node->nxt_node = nxt_node->nxt_node;
-					delete nxt_node;
-				}
-				else{
-					node = node->nxt_node;
-					element = node->front;
-					node->front = element->nxt;
-					node->size--;
-					calc_node_acc(node);
-				}
-			}
-			else{
-				// node size is absolutely >= 2
-				result.element->nxt = element->nxt;
-				node->size--;
-				calc_node_acc(node);
-			}
-		}
+		SearchResult result = search(idx);
+        // 切って先頭を削除
+        NodePtr node = cut(result.node, result.element);
+        NodePtr nxt_node = node->nxt_node;
+        ElementPtr element = nxt_node->front[nxt_node->rev];
+        // [N -> a <-> b] To [N -> b]
+        nxt_node->front[nxt_node->rev] = element->nxt[nxt_node->rev]; // [N -> b]
+        if(nxt_node->front[nxt_node->rev])
+            nxt_node->front[nxt_node->rev]->nxt[!nxt_node->rev] = nullptr; // [null <- b]
+        else
+            nxt_node->front[!nxt_node->rev] = nullptr;
 		delete element;
+        node_refresh(nxt_node);
 		length--;
 	}
 	
@@ -1700,83 +1943,151 @@ public:
 	/// @param l 
 	/// @param r 
 	/// @return 
-	T query(size_t l, size_t r){
-		SearchResult result = search(l);
-		BlockNode<T> *node = result.node;
-		BlockElement<T> *element = result.element;
-		T res;
-		// std::cerr << "query input=" << l << " " << r <<std::endl;
-		// std::cerr << "first element index=" << result.elem_index<< std::endl;
-		if(result.elem_index > 0 || r - l < node->size){
-			res = element->value;
-			l++;
-			while(l < r && element->nxt){
-				element = element->nxt;
-				l++;
-				res = query_func(res, element->value);
-			}
-		}
-		else{
-			res = node->acc_value;
-			l += node->size;
-		}
-		node = node->nxt_node;
-		// std::cerr << "first res:l:r:" << res << " " << l << " " << r << std::endl;
-		while(node && r - l >= node->size){
-			res = query_func(res,node->acc_value);
-			l += node->size;
-			node = node->nxt_node;
-		}
-		// std::cerr << "backet res:l:r:" << res << " " << l << " " << r << std::endl;
-		if(node){
-			BlockElement<T> *element = node->front;
-			while(l++ < r){
-				//std::cerr << element->value <<std::endl;
-				res = query_func(res, element->value);
-				element = element->nxt;
-			}
-		}
-		// std::cerr << "last res:l:r:" << res << " " << l << " " << r << std::endl;
-		return res;
+	Monoid query(size_t l, size_t r){
+        ParseResult parser;
+        parse(l, r, &parser);
+        NodePtr node;
+        Monoid res = Monoid::id();
+        if(parser.left_elements.size()){
+            node = pushdown(parser.front_node);
+            for(auto e: parser.left_elements){
+                res = Monoid::op(res, e->value());
+            }
+        }
+        for(auto node: parser.mid_nodes){
+            res = Monoid::op(res, node->acc_value[node->rev]);
+        }
+        if(parser.right_elements.size()){
+            node = pushdown(parser.back_node);
+            for(auto e : parser.right_elements){
+                res = Monoid::op(res, e->value());
+            }
+        }
+        return res;
 	}
+
+    /// 範囲[l, r)にvalueを作用させる
+    void propagate(size_t l, size_t r, const EffectMonoid& value){
+        ParseResult parser;
+        parse(l, r, &parser);
+        NodePtr node;
+        if(parser.left_elements.size()){
+            node = pushdown(parser.front_node);
+            for(auto e: parser.left_elements){
+                e->value() = effect_func(e->value(), value);
+            }
+            node_refresh(node);
+        }
+        for(auto node: parser.mid_nodes){
+            node->acc_value[node->rev] = effect_func(node->acc_value[node->rev], value);
+            node->acc_value[!node->rev] = effect_func(node->acc_value[!node->rev], value);
+            node->lazy() = EffectMonoid::op(node->lazy(), value);
+        }
+        if(parser.right_elements.size()){
+            node = pushdown(parser.back_node);
+            for(auto e : parser.right_elements){
+                e->value() = effect_func(e->value(), value);
+            }
+            node_refresh(node);
+        }
+    }
+
+    /// 範囲[l, r)をreverseする
+    void reverse(size_t l, size_t r){
+        ParseResult parser;
+        NodePtr node;
+        ElementPtr element;
+        parse(l, r, &parser);
+        node = parser.front_node;
+        std::vector<NodePtr> &rev_range = parser.mid_nodes;
+        // std::cerr << "reverse start" << std::endl;
+        // std::cerr << "rev range size=" << rev_range.size() << std::endl;
+        // debug_print();
+        // 反転する区間を全てある範囲のブロック内に全て納めてノードのみ反転する
+        // 左端を分離する
+        if(parser.left_elements.size()){
+            node = cut(node, parser.left_elements.front());
+            // 分離したノードを反転範囲の中に追加する
+            rev_range.insert(rev_range.begin(), node->nxt_node);
+            if(node == parser.back_node){
+                // 左端で完結
+                // ノードを更に分離
+                cut(node->nxt_node, parser.left_elements.back()->nxt[node->rev]);
+            }
+        }
+        else{
+            // 左端が既に分離されているが、前のノード情報が分からないので先頭で分離する
+            // ノードは既に反転範囲の中に含まれるため、正しく書き換える
+            node = cut(node, static_cast<size_t>(0));
+            rev_range[0] = node->nxt_node;
+        }
+        // std::cerr << "left cut" << std::endl;
+        // std::cerr << "rev range size=" << rev_range.size() << std::endl;
+        // debug_print();
+        // 右端を分離する
+        if(parser.right_elements.size()){
+            // 分離した前ノードは反転範囲に追加する
+            rev_range.push_back(
+                cut(parser.back_node, parser.right_elements.back()->nxt[parser.back_node->rev])
+            );
+        }
+        // std::cerr << "right cut" << std::endl;
+        // std::cerr << "rev range size=" << rev_range.size() << std::endl;
+        // debug_print();
+        NodePtr node_r = rev_range.back()->nxt_node;
+        // std::cerr << "front node" << std::endl;
+        // node->debug_print();
+        for(size_t i = rev_range.size(); i > 0; i--){
+            node->nxt_node = rev_range[i-1];
+            node = node->nxt_node;
+            // std::cerr << "reversed node:" << i << std::endl;
+            // node->debug_print();
+            node->rev = !node->rev;
+        }
+        node->nxt_node = node_r;
+    }
 	
 	/// @brief 要素idxをvalueに更新する
 	/// @param idx 
 	/// @param value 
-	void change(size_t idx, const T& value){
+	void change(size_t idx, const Monoid& value){
 		SearchResult result = search(idx);
-		result.element-> value = value;
-		calc_node_acc(result.node);
+        result.node = pushdown(result.node);
+		result.element->value() = value;
+		node_refresh(result.node);
 	}
 	
 	/// @brief 要素idxを参照する
 	/// @param idx 
 	/// @return 
-	const T& operator[](size_t idx){
-		return search(idx).element->value;
+	const Monoid& operator[](size_t idx){
+		SearchResult result = search(idx);
+        result.node = pushdown(result.node);
+		return result.element->value();
 	}
+
+    /// 要素数を返す
+    const size_t size(){
+        return length;
+    }
 	
 	void debug_print(){
-		BlockNode<T> *node = front_node;
+		NodePtr node = front_node;
 		bool ass = false;
+        std::cerr << "list length=" << length << std::endl;
 		std::cerr << "----------node info----------" << std::endl;
 		while(node){
-			std::cerr << "node size = " << node->size << std::endl;
-			if(node->size == 0){
-				ass = true;
-			}
-			std::cerr << "node acc = " << node->acc_value << std::endl;
-			std::cout << "node lists:\r\n[";
-			BlockElement<T> *element = node->front;
-			while(element){
-				std::cerr << element->value << ", ";
-				element = element->nxt;
-			}
-			std::cerr << "]" << std::endl;
+			if(node != front_node && node->size == 0){
+				// ass = true;
+            }
+            if(node->debug_print()){
+                ass = true;
+            }
 			node = node->nxt_node;
 		}
 		std::cerr << "----------info end----------" << std::endl;
 		if(ass){
+            std::cerr << "abort" << std::endl;
 			exit(0);
 		}
 	}
