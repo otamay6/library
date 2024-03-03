@@ -1631,7 +1631,7 @@ private:
 
 	NodePtr connect_if_short(NodePtr node){
 		NodePtr  nxt_node = node->nxt_node;
-		if(!nxt_node|| node->size + nxt_node->size > std::sqrt(length)){
+		if(!nxt_node|| node->size + nxt_node->size > std::sqrt(length) / 2){
 			return node;
 		}
         return connect(node, nxt_node);
