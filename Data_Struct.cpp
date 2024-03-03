@@ -1554,7 +1554,7 @@ private:
             element->nxt[0] = elements[i];
             elements[i]->nxt[1] = element;
         }
-        calc_node_acc(node);
+        node_refresh(node);
         return node;
     }
 
