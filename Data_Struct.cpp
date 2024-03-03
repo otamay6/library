@@ -1441,7 +1441,6 @@ public:
 //         int value;
 //         int length;
 //     };
-//     RSQ &operator()(void){return *this;}
 //     static constexpr RSQ id(){return RSQ({0,0});}
 //     static RSQ op(RSQ a, RSQ b){return {a.value+b.value, a.length+b.length};}
 //     bool operator!=(const RSQ &rhs){return this->value != rhs.value;}
@@ -1455,7 +1454,6 @@ public:
 /// example: 区間更新を行うモノイド
 // struct RAQ{
 //     int value;
-//     RAQ &operator()(void){return *this;}
 //     static constexpr RAQ id(){return RAQ({(int)0});}
 //     static RAQ op(RAQ a, RAQ b){return {a.value + b.value};}
 //     bool operator!=(const RAQ &rhs){return this->value != rhs.value;}
@@ -1507,14 +1505,14 @@ private:
             std::cout << "*****node start*****:" << this << std::endl;
 			std::cerr << "[size, acc, rev acc, lazy, rev ]\r\n=[";
 			std::cerr << size << "," << acc_value[rev] << ", ";
-			std::cerr << acc_value[!rev] << ", " << lazy() << ", ";
+			std::cerr << acc_value[!rev] << ", " << lazy << ", ";
             std::cerr << rev << "]" << std::endl; 
             std::vector<Monoid> check;
 			std::cout << "node lists:[";
 			ElementPtr element = front[rev];
 			while(element){
-				std::cerr << element->value() << ", ";
-                check.push_back(element->value());
+				std::cerr << element->value << ", ";
+                check.push_back(element->value);
 				element = element->nxt[rev];
 			}
 			std::cerr << "]" << std::endl;
@@ -1523,9 +1521,9 @@ private:
             bool out = false;
             size_t i = check.size();
 			while(element){
-				std::cerr << element->value() << ", ";
-                if(check[--i] != element->value()){
-                    std::cerr << check[i] << " " << element->value() << std::endl;
+				std::cerr << element->value << ", ";
+                if(check[--i] != element->value){
+                    std::cerr << check[i] << " " << element->value << std::endl;
                     out = true;
                 }
 				element = element->nxt[!rev];
@@ -1582,7 +1580,7 @@ private:
     }
 
     NodePtr pushdown(NodePtr node){
-        if(node->lazy() != EffectMonoid::id()){
+        if(node->lazy != EffectMonoid::id()){
             // 遅延を各要素に伝播する
             ElementPtr element = node->front[0];
             while(element){
@@ -1642,10 +1640,10 @@ private:
     void rev_accumulate(NodePtr node){
         bool rev = !node->rev;
         ElementPtr element = node->front[rev];
-        node->acc_value[rev] = element->value();
+        node->acc_value[rev] = element->value;
         while(element->nxt[rev]){
             element = element->nxt[rev];
-            node->acc_value[rev] = Monoid::op(node->acc_value[rev], element->value());
+            node->acc_value[rev] = Monoid::op(node->acc_value[rev], element->value);
         }
     }
 	
@@ -1659,11 +1657,11 @@ private:
         node = pushdown(node);
         node->size = 1;
 		ElementPtr element = node->front[node->rev];
-		node->acc_value[node->rev] = element->value();
+		node->acc_value[node->rev] = element->value;
 		while(element->nxt[node->rev]){
             node->size++;
 			element = element->nxt[node->rev];
-			node->acc_value[node->rev] = Monoid::op(node->acc_value[node->rev], element->value());
+			node->acc_value[node->rev] = Monoid::op(node->acc_value[node->rev], element->value);
 		}
         if constexpr (IsCommutative)
             node->acc_value[!node->rev] = node->acc_value[node->rev];
@@ -1707,7 +1705,7 @@ private:
 
     NodePtr cut(NodePtr node, size_t prv_size){
 		ElementPtr element = node->front[node->rev];
-		for(int i = 0; i < prv_size; i++){
+		for(size_t i = 0; i < prv_size; i++){
 			element = element->nxt[node->rev];
 		}
         return cut(node, element);
@@ -1823,10 +1821,10 @@ public:
                 if constexpr(IsCommutative)
                     node->acc_value[1] = node->acc_value[0];
                 else{
-                    node->acc_value[1] = element->value();
+                    node->acc_value[1] = element->value;
                     while(element->nxt[1]){
                         element = element->nxt[1];
-                        node->acc_value[1] = Monoid::op(node->acc_value[1], element->value());
+                        node->acc_value[1] = Monoid::op(node->acc_value[1], element->value);
                     }
                 }
 				node->nxt_node = new BlockNode<Monoid, EffectMonoid>();
@@ -1851,10 +1849,10 @@ public:
             if constexpr(IsCommutative)
                 node->acc_value[1] = node->acc_value[0];
             else{
-                node->acc_value[1] = element->value();
+                node->acc_value[1] = element->value;
                 while(element->nxt[1]){
                     element = element->nxt[1];
-                    node->acc_value[1] = Monoid::op(node->acc_value[1], element->value());
+                    node->acc_value[1] = Monoid::op(node->acc_value[1], element->value);
                 }
             }
         }
@@ -1962,21 +1960,20 @@ public:
         }
         ParseResult parser;
         parse(l, r, &parser);
-        NodePtr node;
         Monoid res = Monoid::id();
         if(parser.left_elements.size()){
-            node = pushdown(parser.front_node);
+            pushdown(parser.front_node);
             for(auto e: parser.left_elements){
-                res = Monoid::op(res, e->value());
+                res = Monoid::op(res, e->value);
             }
         }
         for(auto node: parser.mid_nodes){
             res = Monoid::op(res, node->acc_value[node->rev]);
         }
         if(parser.right_elements.size()){
-            node = pushdown(parser.back_node);
+            pushdown(parser.back_node);
             for(auto e : parser.right_elements){
-                res = Monoid::op(res, e->value());
+                res = Monoid::op(res, e->value);
             }
         }
         return res;
@@ -1993,19 +1990,19 @@ public:
         if(parser.left_elements.size()){
             node = pushdown(parser.front_node);
             for(auto e: parser.left_elements){
-                e->value() = effect_func(e->value(), value);
+                e->value = effect_func(e->value, value);
             }
             node_refresh(node);
         }
         for(auto node: parser.mid_nodes){
             node->acc_value[node->rev] = effect_func(node->acc_value[node->rev], value);
             node->acc_value[!node->rev] = effect_func(node->acc_value[!node->rev], value);
-            node->lazy() = EffectMonoid::op(node->lazy(), value);
+            node->lazy = EffectMonoid::op(node->lazy, value);
         }
         if(parser.right_elements.size()){
             node = pushdown(parser.back_node);
             for(auto e : parser.right_elements){
-                e->value() = effect_func(e->value(), value);
+                e->value = effect_func(e->value, value);
             }
             node_refresh(node);
         }
@@ -2018,7 +2015,6 @@ public:
         }
         ParseResult parser;
         NodePtr node;
-        ElementPtr element;
         parse(l, r, &parser);
         node = parser.front_node;
         std::vector<NodePtr> &rev_range = parser.mid_nodes;
@@ -2075,7 +2071,7 @@ public:
 	void change(size_t idx, const Monoid& value){
 		SearchResult result = search(idx);
         result.node = pushdown(result.node);
-		result.element->value() = value;
+		result.element->value = value;
 		node_refresh(result.node);
 	}
 	
@@ -2085,7 +2081,7 @@ public:
 	const Monoid& operator[](size_t idx){
 		SearchResult result = search(idx);
         result.node = pushdown(result.node);
-		return result.element->value();
+		return result.element->value;
 	}
 
     /// 要素数を返す
