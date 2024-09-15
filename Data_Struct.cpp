@@ -59,6 +59,8 @@ template<typename T> class SegmentTree{
 };
 
 
+/// @brief 動的セグ木、インデックスが連続でなくても区間取得が可能
+/// @tparam T 
 template<typename T>
 class dynamic_segtree{
   private:
