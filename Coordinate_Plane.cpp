@@ -61,6 +61,8 @@ struct Coordinate_Plane{
             }
             else return atan2(y,x);
         }
+        // no reach
+        return 0.0;
     }
     void rotate(double theta){
         double X=x,Y=y;
@@ -99,7 +101,7 @@ struct Line{
 };
 struct Triangle{
     Coordinate_Plane a,b,c;
-    Triangle(Coordinate_Plane p1=Coordinate_Plane(0,0),Coordinate_Plane p2=Coordinate_Plane(1,0),Coordinate_Plane p3=(0,1)):a(p1),b(p2),c(p3){}
+    Triangle(Coordinate_Plane p1=Coordinate_Plane(0,0),Coordinate_Plane p2=Coordinate_Plane(1,0), Coordinate_Plane p3=Coordinate_Plane(0,1)):a(p1),b(p2),c(p3){}
 
     double A()const{double res=fabs((b-a).rad()-(c-a).rad());if(res>=PI) res-=PI;return res;}
     double B()const{double res=fabs((a-b).rad()-(c-b).rad());if(res>=PI) res-=PI;return res;}

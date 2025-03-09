@@ -1,9 +1,13 @@
+// dependancies
+#include<iostream>
 #include<vector>
-#include<queue>
 #include<stack>
 #include<utility>
 #include<functional>
 #include<random>
+#include<complex>
+#include<set>
+#include<cassert>
 
 /// @brief セグ木
 /// @tparam T モノイド
@@ -496,6 +500,7 @@ class FFT{
     std::vector<Complex> C;
     void DFT(std::vector<Complex> &F,size_t n,int sig=1){
         if(n==1) return;
+        constexpr double PI = 3.1415926535897932384626433832795028841971;
         std::vector<Complex> f0(n/2),f1(n/2);
         for(size_t i=0;i<n/2;++i){
             f0[i]=F[2*i];
@@ -821,7 +826,7 @@ class ImplicitTreap {
         if (!t) return;
         pushdown(t);
         dump(t->l);
-        cout << t->value << " ";
+        std::cout << t->value << " ";
         dump(t->r);
     }
     
@@ -887,7 +892,7 @@ public:
 
     void dump() {
         dump(root);
-        cout << endl;
+        std::cout << std::endl;
     }
 
     T operator[](int pos) {
@@ -990,12 +995,12 @@ public:
     }
 
     void print(T x){
-        cerr << "cht data print start" << endl;
-        cerr << x << endl;
+        std::cerr << "cht data print start" << std::endl;
+        std::cerr << x << std::endl;
         for(auto &line: lines){
-            cerr << line.a << " " << line.b << " " << line.f(x) << endl;
+            std::cerr << line.a << " " << line.b << " " << line.f(x) << std::endl;
         }
-        cerr << "cht data print end" << endl;
+        std::cerr << "cht data print end" << std::endl;
     }
 };
 
@@ -1902,8 +1907,7 @@ public:
 			node->acc_value[0] = node->acc_value[1] = value;
 			front_node->nxt_node = node;
 			// std::cerr << "first insert end" <<std::endl;
-		}
-        else if(idx == length){
+		} else if(idx == length){
             // 最後の要素に挿入
             SearchResult result = search(idx-1);
             node = result.node;
@@ -1911,8 +1915,7 @@ public:
             result.element->nxt[node->rev] = element;
             element->nxt[!node->rev] = result.element;
             node->front[!node->rev] = element;
-        }
-        else{
+        } else {
             // 要素を検索
 			SearchResult result = search(idx);
 			node = result.node;

@@ -34,7 +34,7 @@ class Ruiseki
     int N;
 
   public:
-    Ruiseki(const vector<T> &a=vector<T>(), F f=[](T a,T b){return a+b;}, F g=[](T a,T b){rertun a-b;},T INI=0)
+    Ruiseki(const vector<T> &a=vector<T>(), F f=[](T a,T b){return a+b;}, F g=[](T a,T b){return a-b;},T INI=0)
     :f(f),g(g),d0(INI)
     {
         N = a.size();

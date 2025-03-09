@@ -1,6 +1,10 @@
+// dependancies
 #include<iostream>
 #include<vector>
+#include<map>
 using namespace std;
+#define REP(i,n) for(int i=0;i<(n);++i)
+#define rep(i,a,b) for(int i=int(a);i<int(b);++i)
 
 template<typename T> class MAT{
  private:

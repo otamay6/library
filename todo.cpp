@@ -1,3 +1,6 @@
+#include<iostream>
+#include<functional>
+
 template<class Monoid, class EffectMonoid, bool IsCommutative = true>
 class BinaryLinkedList{
 private:
@@ -26,7 +29,7 @@ private:
         }
 
         bool debug_print(){
-            std::cout << "*****node start*****:" << this << std::endl;
+            std::cerr << "*****node start*****:" << this << std::endl;
 			std::cerr << "[size, acc, rev acc, lazy, rev, child count ]\r\n=[";
 			std::cerr << size << "," << acc_value[rev] << ", ";
 			std::cerr << acc_value[!rev] << ", " << lazy << ", ";
@@ -34,7 +37,8 @@ private:
             std::vector<Node *> check;
 			Node *child = child_front[rev];
 			while(child){
-                check.push_back(element->value);
+                check.push_back(child->value);
+                child = child->nxt[rev];
 			}
 			child = child_front[!rev];
             bool out = false;
@@ -49,7 +53,7 @@ private:
             return out;
         }
     };
-
+    using NodePtr = Node *;
     Node *front_node;
 
     void pushdown(Node *node){
@@ -199,7 +203,7 @@ private:
 
         // 子同士のリンク張替え
         Node *target_prv = node->child_front[!node->rev];
-        Node *target_nxt = nxt_noe->child_front[nxt_node->rev];
+        Node *target_nxt = nxt_node->child_front[nxt_node->rev];
         if(target_prv){
             target_prv->nxt[node->rev] = target_nxt;
         }

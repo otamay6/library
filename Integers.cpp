@@ -107,11 +107,11 @@ class Factorial
     {
         fac.push_back(1);
         for(int i=0;i<N;++i)
-        fac.push_back(fac[i] * (i + 1) % mod);
+            fac.push_back(fac[i] * (i + 1) % mod);
         ifac.resize(N + 1);
         ifac[N] = inv_mod(fac[N]);
         for(int i=0;i<N;++i)
-        ifac[N - 1 - i] = (ifac[N - i] * (N - i)) % mod;
+            ifac[N - 1 - i] = (ifac[N - i] * (N - i)) % mod;
     }
 
     ll fact(ll a) { return fac[a]; }

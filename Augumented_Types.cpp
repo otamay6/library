@@ -1,4 +1,10 @@
+// dependancy
 #include<iostream>
+#include<cmath>
+#include<vector>
+#include<complex>
+#include<stack>
+
 typedef long long ll;
 constexpr ll mod=1e9+7;
 class mint {
@@ -161,7 +167,7 @@ template<typename T>
 class Polynomial{//f(x)=a_0+a_1x+a_1x^2+...
     const double PI=acos(-1);
     std::vector<T> fx;
-    using Complex=complex<double>;
+    using Complex=std::complex<double>;
     void DFT(std::vector<Complex> &F,int n,int sig=1)const{
         if(n==1) return;
         std::vector<Complex> f0(n/2),f1(n/2);
