@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <cstring>
 
@@ -26,5 +27,9 @@ namespace strlib {
             if(s[i] != s[N-i-1]) return false;
         }
         return true;
+    }
+
+    void printYesNo(bool yes){
+        std::cout << (yes ? "Yes\n" : "No\n");
     }
 };
