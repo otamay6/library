@@ -16,7 +16,7 @@ def modpow(x,n,mod)
     return res
 end
 
-def SQRT(n)
+def sqrt_floor(n)
     s=1; 
     while (s*s>n||n>=(s+1)*(s+1)) do 
         s=(n/s+s)/2
