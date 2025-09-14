@@ -209,7 +209,7 @@ public:
         return *this;
     }
     // 整数変換
-    operator int(){
+    explicit operator int(){
         return this->value;
     }
 
