@@ -1,6 +1,13 @@
+#pragma once
+
+// WIP : 未完成、要テスト
 #include<iostream>
 #include<functional>
 
+/// @brief 平方分割の双方向連結リスト
+/// @tparam Monoid ノード内の要素のモノイド
+/// @tparam EffectMonoid 遅延評価のモノイド
+/// @tparam IsCommutative Monoidが可換かどうか
 template<class Monoid, class EffectMonoid, bool IsCommutative = true>
 class BinaryLinkedList{
 private:
