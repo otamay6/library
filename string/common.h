@@ -9,7 +9,7 @@ namespace strlib {
     /// @param n 分割対象の文字列
     /// @param a 分割する桁数
     /// @return (左側の文字列,右側の文字列)、aが不正な場合(-1,-1)
-    inline std::pair<long long, long long> splitint(std::string n,int a){
+    inline std::pair<long long, long long> splitint(const std::string &n,int a){
         int Len=n.length();
         if(a<0||Len<a) return {-1,-1};
         std::string left,right;
@@ -21,7 +21,7 @@ namespace strlib {
     /// @brief 回文判定
     /// @param s 判定対象の文字列
     /// @return 回文ならtrue
-    inline bool is_kaibun(std::string s){//O(|S|)
+    inline bool is_kaibun(const std::string &s){//O(|S|)
         size_t N = s.size();
         for(size_t i = 0; i < N/2; ++i){
             if(s[i] != s[N-i-1]) return false;
@@ -29,7 +29,7 @@ namespace strlib {
         return true;
     }
 
-    void printYesNo(bool yes){
+    inline void printYesNo(bool yes){
         std::cout << (yes ? "Yes\n" : "No\n");
     }
 };

@@ -4,6 +4,8 @@
 #include <type_traits>
 #include <vector>
 #include <string>
+#include <functional>
+#include <queue>
 
 /// @brief 2次元ボードを扱うクラス
 /// @details 範囲外アクセスを許容して操作を単純にする
@@ -14,6 +16,8 @@ class Board{
 private:
     std::vector<std::vector<T>> board;
     size_t height,width;
+
+    using SearchFunc = std::function<void(Board &, int, int)>;
 
     bool inside(int x, int y){
         return 0 <= x && x < (int)width && 0 <= y && y < (int)height;
@@ -35,6 +39,50 @@ public:
             board[y][x] = value;
         }
     }
+
+    /// @brief 探索用の関数
+    /// @param x,y : 探索初期位置
+    /// @param search_list : [dx, dy]のリスト形式の移動候補
+    /// @param func : 候補移動時に呼ばれる関数
+    void search(int x, int y, const std::vector<std::array<int, 2>> &search_list, SearchFunc func){
+        for(auto dir : search_list) {
+            int dx = dir[0], dy = dir[1];
+            func(*this, x + dx, y + dy);
+        }
+    }
+
+    /// @brief 隣接する四方を探索するためのsearch関数ラッパ
+    void search_neigher(int x, int y, SearchFunc func){
+        search(x, y, {{-1,0}, {0, -1}, {1, 0}, {0, 1}}, func);
+    }
+
+    /// @brief 周囲8マスを探索するためのsearch関数ラッパ
+    void search_round(int x, int y, SearchFunc func){
+        search(x, y, 
+            {
+                {-1, -1}, {-1, 0}, {-1, 1}, 
+                {0, -1}, {0, 1},
+                {1, -1}, {1, 0}, {1, -1},
+            }, func);
+    }
+
+    /// @brief BPFで探索する関数
+    void search_bfs(int x, int y, SearchFunc func){
+        std::queue<std::array<int , 2>> pos;
+        std::vector<std::vector<bool>> searched(height, std::vector<bool>(width, false));
+        pos.push({x, y});
+        while(pos.size()){
+            auto p = pos.front();
+            pos.pop();
+            int nx = p[0], ny = p[1];
+            if(searched[ny][nx]) continue;
+            func(board, x, y);
+            search_neighber(x, y, [&pos](Board &, int x, int y){
+                pos.push({x, y});
+            });
+            searched[ny][nx] = true;
+        }
+    };
 
 
     friend std::istream &operator >>(std::istream &is, Board &bd){
