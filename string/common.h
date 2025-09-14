@@ -21,7 +21,7 @@ namespace strlib {
     /// @param s 判定対象の文字列
     /// @return 回文ならtrue
     inline bool is_kaibun(std::string s){//O(|S|)
-        int N = s.size();
+        size_t N = s.size();
         for(size_t i = 0; i < N/2; ++i){
             if(s[i] != s[N-i-1]) return false;
         }
