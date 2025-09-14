@@ -12,13 +12,44 @@ enum class OverFlowBehave{
 
 template<int MIN, int MAX, OverFlowBehave overflow_behave = OverFlowBehave::ROLL>
 class SafeInt{
-    static_assert(INT_MIN < MIN && MAX < INT_MAX, "SafeIntは本来のint型より小さい範囲で使用してください");
+    static_assert(INT_MIN < MIN && MAX < INT_MAX && INT_MAX - MAX - 1 <= -MIN, "SafeIntは本来のint型より明確に小さい範囲で使用してください");
 private:
     int value;
 public:
     SafeInt(int v = 0) {
-        if(v < MIN) v = MIN;
-        if(v > MAX) v = MAX;
+        if(OverFlowBehave::SATURATE == overflow_behave){
+            if(v < MIN) v = MIN;
+            if(v > MAX) v = MAX;
+        } else if(OverFlowBehave::ROLL == overflow_behave){
+            constexpr int cycle = MAX - MIN + 1;
+            if(v < MIN){
+                // diffの算出自体がオーバーフローしないか
+                // MAXと逆のやり方でいい
+                if(v < 0 && INT_MAX + v < MIN){
+                    v += cycle * (-v / cycle);
+                    if(INT_MAX + v < MIN)
+                        v += cycle;
+                }
+                int diff = MIN - v;
+                diff %= cycle;
+                v = MAX - diff + 1;
+            }
+            if(v > MAX){
+                // diffの算出自体がオーバーフローしないか
+                if(v > 0 && INT_MAX - v < - MAX){
+                    // MAXが負は自明なのでvが正ならばMAXより大きい
+                    v %= cycle;
+                    // 尚オーバーフローしそうなら更に引く
+                    if(INT_MAX - v < - MAX)
+                        v -= cycle;
+                }
+                int diff = v - MAX;
+                diff %= cycle;
+                v = MIN + diff - 1;
+            }
+        } else if(OverFlowBehave::ERROR == overflow_behave){
+            v = INT_MAX;
+        }
         value = v;
     }
     /// @brief オーバーフローしているか判定
