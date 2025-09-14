@@ -9,11 +9,12 @@ class SafeInt{
 private:
     int value;
 public:
-    explicit SafeInt(int v = 0) {
+    SafeInt(int v = 0) {
         if(v < MIN) v = MIN;
         if(v > MAX) v = MAX;
         value = v;
     }
+    // 四則演算
     friend SafeInt operator +(const SafeInt &a, const SafeInt &b) {
         int result = a.value + b.value;
         if(a.value >= 0 && b.value >= 0) {
@@ -106,6 +107,12 @@ public:
         }
         return SafeInt(a.value / b.value);
     }
+    friend SafeInt operator %(const SafeInt &a, const SafeInt &b){
+        // 剰余はbが正であることを仮定していい
+        assert(b.value > 0);
+        return SafeInt(a.value % b.value);
+    }
+    // 比較演算
     friend bool operator ==(const SafeInt &a, const SafeInt &b) {
         return a.value == b.value;
     }
@@ -124,6 +131,28 @@ public:
     friend bool operator >=(const SafeInt &a, const SafeInt &b) {
         return a.value >= b.value;
     }
+    SafeInt operator +=(const SafeInt &x){
+        *this = *this + x;
+        return *this;
+    }
+    SafeInt operator -=(const SafeInt &x){
+        *this = *this - x;
+        return *this;
+    }
+    SafeInt operator *=(const SafeInt &x){
+        *this = *this * x;
+        return *this;
+    }
+    SafeInt operator /=(const SafeInt &x){
+        *this = *this / x;
+        return *this;
+    }
+    SafeInt operator %=(const SafeInt &x){
+        *this = *this % x;
+        return *this;
+    }
+
+
     friend std::ostream& operator<<(std::ostream &os, const SafeInt &a) {
         os << a.value;
         return os;
